@@ -1,0 +1,123 @@
+\subsubsection{模型建立：色散相位决定条纹间距}
+
+一次返回光谱的条纹来自两条路径的复场叠加：一条是外延层表面的直接反射，另一条是到达衬底界面后的首个返回。要让这两条路径同时承接本题的外部角度与波数，先把界面振幅和层内传播相位放在同一套符号中。
+
+介质$j=0,1,2$依次为空气、外延层、衬底，外角为$\theta$，厚度$d$以$d_{\mathrm{cm}}=d$计算、以$d_{\mu\mathrm{m}}=10^4d_{\mathrm{cm}}$报告，波数为$\sigma$（$\mathrm{cm}^{-1}$），复折射率为$N_j=n_j+i\kappa_j$（实部$n_j$、消光系数$\kappa_j$），空气取$N_0=1$。平面界面上切向波矢守恒，归一化切向分量为$N_0\sin\theta=\sin\theta$，故纵向分量满足$N_j^2=q_j^2+\sin^2\theta$。层内纵向传播因子和一次往返传播因子定义为
+\begin{equation}
+q_j=\sqrt{N_j^2-\sin^2\theta},\qquad
+z=\exp\!\left(4\pi i d_{\mathrm{cm}}\sigma q_1\right).
+\end{equation}
+其中$q_j$描述光在相应介质中沿厚度方向的传播，$z$则把外延层厚度、入射角和波数合并为一次往返的复相位；复根取$\operatorname{Im}q_j\geq0$，透明时取非负实根，使有损介质中的传播幅度不增长。
+% 依据:交接/建模笔记_问题1.md:2.几何、波数和传播因子
+
+偏振差异先进入界面导纳。记$s$、$p$为两种相互正交的偏振，$Y_j^{(a)}$为偏振$a$在介质$j$中的切向电场导纳。对任一偏振，在相邻介质$j,k$的界面处，把入射切向电场振幅归一为一，并将反射、透射振幅暂记为$r,t$；切向电场与磁场连续分别给出
+\begin{equation}
+1+r=t,\qquad Y_j(1-r)=Y_kt.
+\end{equation}
+这里$Y_j,Y_k$表示所选偏振在界面两侧的导纳。联立两式消去$t$求得$r$，再由$t=1+r$求透射系数；恢复偏振标记后有
+\begin{equation}
+Y_j^{(s)}=q_j,\qquad Y_j^{(p)}=\frac{N_j^2}{q_j},\qquad
+r_{jk}^{(a)}=\frac{Y_j^{(a)}-Y_k^{(a)}}{Y_j^{(a)}+Y_k^{(a)}},\qquad
+t_{jk}^{(a)}=\frac{2Y_j^{(a)}}{Y_j^{(a)}+Y_k^{(a)}}.
+\end{equation}
+这里$r_{jk}^{(a)}$和$t_{jk}^{(a)}$分别是从介质$j$到介质$k$的反射、透射振幅系数。令表面直接反射项$a_a=r_{01}^{(a)}$，首个返回的界面项$b_a=t_{01}^{(a)}t_{10}^{(a)}r_{12}^{(a)}$，题面的一次返回边界便给出
+\begin{equation}
+E_a=a_a+b_a z .
+\end{equation}
+因此，$s$、$p$偏振的差别留在$a_a,b_a$中，厚度则只通过$z$进入；$10^\circ$与$15^\circ$两条观测支路可以共享$d$，同时保留各自的界面响应。场表达式确定后，下一步是把正交偏振的强度混合，并展开其中的交叉干涉项。
+% 依据:交接/建模笔记_问题1.md:3.界面系数与一次往返场
+
+设$s$偏振强度权重为$w$，$0\leq w\leq1$，$p$偏振权重为$1-w$。由于两种偏振正交，观测反射率比例是两种偏振强度的加权和，而不是把两种电场直接相加。令$w_s=w$、$w_p=1-w$，并定义
+\begin{equation}
+U=\sum_a w_a|a_a|^2,\qquad V=\sum_a w_a|b_a|^2,\qquad C=\sum_a w_a a_a^*b_a,
+\end{equation}
+则一次返回模型的强度展开为
+\begin{equation}
+R_2=\sum_a w_a|E_a|^2=U+V|z|^2+2\operatorname{Re}(Cz).
+\end{equation}
+其中$U$是直接反射背景，$V|z|^2$是首个返回的幅度项，$2\operatorname{Re}(Cz)$是两条路径相遇产生的条纹项。
+% 依据:交接/建模笔记_问题1.md:4.强度展开、色散和峰谷系数
+
+两种强度写法在已知条件的合成光谱上相符；这里的合成光谱，是先给定厚度、折射率曲线与偏振比例，再由两束光相加生成的光谱。表\ref{tab:field-check-conditions}列出数值核对的条件，直接复场强度与交叉项展开的最大绝对差为$1.7\times10^{-16}$（反射率比例）；另令衬底与外延层折射率相同，在零返回核对点保留与去掉返回项的反射率差为$0$。
+% src:求解/问题1/结果/模型验证.json:场展开一致性最大绝对差_比例;零界面返回项差_比例
+
+\begingroup
+\setlength{\tabcolsep}{0.01\textwidth}
+\Needspace{11\baselineskip}
+\begin{longtable}{>{\centering\arraybackslash}p{0.26\textwidth}>{\centering\arraybackslash}p{0.70\textwidth}}
+  \caption{两种强度写法的数值核对条件}\label{tab:field-check-conditions}\\
+  \toprule
+  核对项目 & 取值 \\
+  \midrule
+  几何厚度 & $3,8,20\ \mu\mathrm{m}$ \\
+  外部入射角 & $10^\circ,15^\circ$ \\
+  波数采样 & 附件1原始坐标每隔$32$点取一点 \\
+  外延层折射率 & $n_1(\sigma)=2.8+0.08(\sigma-2200)/1800$ \\
+  衬底折射率 & $n_2(\sigma)=n_1(\sigma)+0.8$ \\
+  吸收与偏振 & $\kappa_1=\kappa_2=0,\quad w=0.5$ \\
+  零返回核对点 & $d_{\mu\mathrm{m}}=8,\quad\theta=10^\circ,\quad\sigma=2199.9\ \mathrm{cm}^{-1}$ \\
+  \bottomrule
+\end{longtable}
+\endgroup
+% 依据:求解/问题1/求解_问题1.py:model_validation;index_at
+% src:数据/问题1_冻结合成输入/合成设计.json:基础情景.厚度_微米;角度_度;基础情景.垂直偏振权重;基础情景.衬底折射率增量;基础情景.消光系数;灵敏度锚例.折射率基值;灵敏度锚例.色散斜率;生成规则.归一化波数;生成规则.层折射率
+
+附录图~\ref{fig:field-expansion}进一步交叉比较折射率基值为$2.4$或$3.4$、色散斜率为$0$或$0.08$的组合，厚度、角度、衬底折射率增量与偏振设置沿用表中的一般核对条件。散点贴近等值线，表示两种写法在同一波数点给出相同的反射率，而不是比较不同波数点的光谱形状。
+% src:数据/问题1_冻结合成输入/合成设计.json:基础情景.折射率基值;基础情景.色散斜率;基础情景.厚度_微米;角度_度;基础情景.衬底折射率增量;基础情景.垂直偏振权重
+% src:交接/图注素材_1.json:5.独有信息
+
+
+
+两种强度写法的代数一致性确定后，进一步考察色散对条纹位置的作用。透明且包络变化较慢时，令$\psi=\arg C$，主干相位可写为
+\begin{equation}
+\Phi(\sigma,\theta)=4\pi d_{\mathrm{cm}}\sigma\operatorname{Re}q_1+\psi,\qquad
+\Phi'=4\pi d_{\mathrm{cm}}\left(q_1+\sigma\frac{dq_1}{d\sigma}\right)+\frac{d\psi}{d\sigma}.
+\end{equation}
+式中撇号表示对波数$\sigma$求导。若折射率实部记为$n(\sigma)$，则$q_1=\sqrt{n^2-\sin^2\theta}$且$\mathrm{d}q_1/\mathrm{d}\sigma=nn'/q_1$，所以相位导数中的色散贡献为$\sigma nn'/q_1$。这一步把“条纹间距”落到相位对波数的变化率，而不是把一个全谱固定系数直接当成厚度。
+% 依据:交接/建模笔记_问题1.md:4.强度展开、色散和峰谷系数
+
+相位级次与反射率峰谷之间还隔着背景和振幅的变化。把强度展开整理为
+\begin{equation}
+R_2=B+A\cos\Phi,\qquad
+R_2'=B'+A'\cos\Phi-A\Phi'\sin\Phi.
+\end{equation}
+其中$B=U+V|z|^2$为反射率背景，$A=2|Cz|$为条纹振幅。只有$A$不接近零，且$|B'|$、$|A'|$远小于$|A\Phi'|$时，反射率极值才近似对应相位级次。上一节的波段包络差异表明，全谱背景和振幅并不恒定，因此峰距承担局部相位核对，主求解仍拟合两束截断场强度。
+% 依据:交接/建模笔记_问题1.md:4.强度展开、色散和峰谷系数
+
+\begin{samepage}
+在上述缓变条件下，相邻同型极值的相位差近似为一个完整周期，故其波数差$\Delta\sigma$满足
+\begin{equation}
+2d\,\Delta(\sigma q_1)+\frac{\Delta\psi}{2\pi}\simeq1,\qquad
+d_{\mu\mathrm{m}}\simeq\frac{5000\left(1-\Delta\psi/(2\pi)\right)}{\Delta(\sigma q_1)}.
+\end{equation}
+\end{samepage}
+对实际相邻同型条纹，将波数差记为$\Delta\sigma_{\mathrm{loc}}$，相应局部周期等效量记为$T_{\mathrm{loc}}$。将同型条纹关系除以该波数差，得到
+\begin{equation}
+\begin{aligned}
+T_{\mathrm{loc}}&=\frac{5000}{\Delta\sigma_{\mathrm{loc}}}\simeq
+d_{\mu\mathrm{m}}\frac{\Delta(\sigma q_1)}{\Delta\sigma_{\mathrm{loc}}}
++\frac{2500}{\pi}\frac{\Delta\psi}{\Delta\sigma_{\mathrm{loc}}},\\
+T_{\mathrm{loc}}-d_{\mu\mathrm{m}}q_1&\simeq
+d_{\mu\mathrm{m}}\frac{\sigma nn'}{q_1}+\frac{2500}{\pi}\psi'.
+\end{aligned}
+\label{eq:period-equivalent}
+\end{equation}
+这里差商表示相邻同型条纹间的平均相位变化，第二行为局部近似，右端给出偏离厚度乘纵向传播因子的两项来源。两项均可忽略时才有$T_{\mathrm{loc}}\simeq d_{\mu\mathrm{m}}q_1$。实测$T$来自有限窗口的最佳正弦周期，不等于逐点测得的$T_{\mathrm{loc}}$；将前者也简写为$dq_1$，还须核验窗口内相位斜率近似恒定。本题没有估计或扣除这些导数项，因而保留$T$作为周期统计量，不作厚度乘积的实测标定。
+
+峰到谷只跨过半个周期，必须改写为
+\begin{equation}
+2d\,\Delta(\sigma q_1)+\frac{\Delta\psi}{2\pi}\simeq\frac12,\qquad
+d_{\mu\mathrm{m}}\simeq\frac{2500\left(1-\Delta\psi/\pi\right)}{\Delta(\sigma q_1)}.
+\end{equation}
+当$n'=0$、界面相位变化缓慢且包络导数相对主相位项可忽略时，才退化为$5000/(q_1\Delta\sigma)$和$2500/(q_1\Delta\sigma)$。两个系数相差一倍，正是峰谷不能直接套用同型峰距式的原因；图\ref{fig:dispersion-spacing}进一步把色散斜率与波数对常数峰距偏差的共同作用分开显示。
+% src:求解/问题1/结果/模型验证.json:常折射率退化.同型系数_微米;常折射率退化.峰谷系数_微米
+% src:交接/实验记录.json:477.现象;477.决定
+% 依据:交接/建模笔记_问题1.md:4.强度展开、色散和峰谷系数
+
+
+
+峰谷系数的分开处理并非形式上的修补。奇偶级次反演在色散坐标中区分同型极值与半周期事件，同型极值不足时未用峰谷混合补足；全部合成案例均保留。因此本节保留两类级次的不同方程。
+% src:交接/实验记录.json:56.尝试;56.现象;56.决定
+
+固定光学条件后搜索得到的厚度解构成厚度候选，优劣以两角反射率的联合残差平方均值衡量，而不是预先给定干涉级次。相位坐标由此解释双角条纹疏密，并为下一节的合成回收、实测周期提取和低残差厚度候选提供共同依据。
+% 依据:交接/建模笔记_问题1.md:5.厚度反演与验证方案

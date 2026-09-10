@@ -1,0 +1,24 @@
+{
+  "页问题": [
+    {
+      "页": 92,
+      "严重度": 2,
+      "问题": "物理第91页下半部开始清单13，第92—98页连续为源码续页，只有行号和两侧边框，没有模块标题或阅读导引。第93—97页翻页后难以迅速判断所处计算环节，形成超过七页的同质版面；这是源码附录的导航问题，不按正文图表堆叠误判。",
+      "修改指令": "在论文/8.3.问题三源码.tex 第171行，将 label=lst:q3-complete 的单个 \\lstinputlisting 改成同源文件的五段连续摘录，依次使用 firstline=1,lastline=142,firstnumber=1；firstline=143,lastline=290,firstnumber=143；firstline=291,lastline=544,firstnumber=291；firstline=545,lastline=674,firstnumber=545；firstline=675,lastline=1098,firstnumber=675。第一段保留原 caption 和 label；其余四段不设置 caption/label，在段前分别加入一行 {\\footnotesize\\bfseries 清单\\ref{lst:q3-complete}（续）：场与响应构造}、条件优化与训练内选择、参数记录与场检验、扰动验证与执行入口。各段仍读取 ../求解/问题3/升格3/求解.py，不改动脚本或散列。五段共用原局部 lstset，增加 emptylines=0，并将 aboveskip、belowskip 同时由0.8em改为2pt；已核实该源文件共1098行、其中87行为空白，省去空白显示用于抵消四行模块导引及新增段间距。保持原字号、版心和自然分页，不增加强制分页；重编后总页数不得超过修改前。"
+    },
+    {
+      "页": 94,
+      "严重度": 2,
+      "问题": "第92—98页左侧行号密集，逐行小号数字与边框形成连续黑带，三位数行号难以在附图尺度下辨认；同一附录前部已有每五行编号的设置，此处局部样式却未显式固定编号步长。第94页尤为明显。",
+      "修改指令": "在论文/8.3.问题三源码.tex 第165—170行、仅服务 lst:q3-complete 的局部 \\lstset 中显式增加 stepnumber=5,numberfirstline=true,numberblanklines=false，并将 numberstyle=\\tiny 改为 numberstyle=\\ttfamily\\fontsize{7}{7}\\selectfont；保留 numbers=left、numbersep=5pt 和 xleftmargin=1.5em。若采用分段展示，每段 firstnumber 必须使用源文件真实起始行号，不从1重新编号。此改动只改变边栏编号，不增加代码行高、框宽或页数，也不改 format.cls 的文件名字体加载。"
+    },
+      {
+      "页": 98,
+      "严重度": 2,
+      "问题": "第98页报告字典与参数记录含较多长行，自动折行后的续行与源码本身的缩进混在一起，行首空白和右侧密集文字反差较大；第93、96、97页也有类似表现。未见足够证据断言字符越出版心，但续行缺少明确标识，影响代码阅读。",
+      "修改指令": "在论文/8.3.问题三源码.tex 中 lst:q3-complete 的同一局部 \\lstset 增加 breakautoindent=false,breakindent=1em,postbreak=\\mbox{\\ensuremath{\\hookrightarrow}\\space}，保留 breaklines=true、breakatwhitespace=false、columns=fullflexible、keepspaces=true 和 tabsize=4。这样仅将自动续行统一为1em缩进并标出折行，源文件的原始缩进保持不变；不得用减小 basicstyle 字号或横向缩放解决。与前述 emptylines=0 配套执行，腾出的87个空白显示行作为新增折行的占高预算；比较改前改后总页数，若仍增页则撤销该续行符设置，不得通过扩大版心或强制分页补救。"
+    }
+  ],
+  "总体评价": "已审物理第91—98页（页脚印刷页码90—97），对应问题三附录的产物索引及清单13。外框总体对齐，未发现可确认的图表溢出、公式编号异常、页尾节标题悬空或大片页底留白；本段没有需要调整宽度的图表。主要扣分项是长源码缺少模块导航、行号形成密集黑带，以及自动续行难辨。三条意见按共性问题合并，不为八页重复开单。附图只有579×819像素，代码笔画呈碎点状，但源码使用 footnotesize，不能仅据缩略图判为实际印刷字号不足或严重裁切，故不报未经核实的严重度3问题，也不建议整体放大字号。本次仅写评审，不修改论文或求解源码；建议均需以重编后的页数不增加为验收条件。本轮未附上一轮台账，不作配对裁定。",
+  "美观分": 7.0
+}

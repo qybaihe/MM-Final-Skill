@@ -1,0 +1,123 @@
+// 数模论文流水线全景图（本地版 · M5-0 迁移后）
+// 渲染：dot -Tpdf 流水线全景图.dot -o 流水线全景图.pdf && dot -Tpng -Gdpi=150 流水线全景图.dot -o 流水线全景图.png
+digraph 论文铸造厂 {
+  rankdir=LR; bgcolor="white"; pad=0.3; nodesep=0.28; ranksep=0.5;
+  node  [fontname="FandolHei", fontsize=11, style="filled,rounded", shape=box, color="#4a6fa5", fillcolor="#eaf1fb"];
+  edge  [fontname="FandolHei", fontsize=9, color="#666666", arrowsize=0.8];
+
+  输入 [shape=folder, fillcolor="#fff4d6", color="#b8942a", label="赛题 PDF\n+ 附件数据"];
+
+  // ---------- S0 ----------
+  subgraph cluster_S0 {
+    label="S0 吃透题目"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S0a [label="本地基建\n环境验齐+PDF抽文本"];
+    S0b [label="读题官 ∥ 数据体检师\n题面契约+数据档案"];
+    S0c [label="答卷预测官\n+ 需求追踪矩阵（驱动生成）"];
+    S0a -> S0b -> S0c;
+  }
+  G0 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="G0\n契约门"];
+
+  // ---------- S1 ----------
+  subgraph cluster_S1 {
+    label="S1 战略锦标赛"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S1a [label="规划师·路线侦察\n每问 N 条真正不同路线"];
+    S1b [label="建模师·原型（路线×问 ∥）\n小样 · 单一指标 · ≤3分钟"];
+    S1c [label="解读师·裁决\n实测指标+论文价值→优胜"];
+    S1d [label="规划师·计划定稿\nDAG/图表/页数/叙事/偏离点"];
+    S1a -> S1b -> S1c -> S1d;
+  }
+  G1 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="G1 战略门\nDAG合法+完整"];
+
+  // ---------- S2 ----------
+  subgraph cluster_S2 {
+    label="S2 建模求解（依赖DAG分层，数字变更→级联重算下游）"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S2a [label="建模师\n脚本(只写不跑)+笔记+假设台账"];
+    S2b [label="跑求解脚本\n12分钟预算·失败修复"];
+    S2c [label="解读师·解读循环≤2轮\n五项正确性协议"];
+    S2d [label="红队·独立复算\n禁读建模侧材料"];
+    S2e [label="解读师·仲裁\n口径差异→放行"];
+    S2a -> S2b -> S2c -> S2d;
+    S2d -> S2e [label="不齐", fontsize=9];
+    S2e -> S2a [label="建模返工", fontsize=9, style=dashed, constraint=false];
+  }
+  G2 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="G2 正确性门/问\n连败→升格蜂群\n仍不过→降级留痕"];
+
+  // ---------- S3 ----------
+  subgraph cluster_S3 {
+    label="S3 图证生产"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S3a [label="绘图师×3波 ∥\n绘图脚本→跑成图"];
+    S3b [label="图评循环：图评师看图 ∥\n台账·配对评审·更差回退\n低分→图修定向改"];
+    S3a -> S3b;
+  }
+  G3 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="G3 图证门\n配额/多样性"];
+
+  // ---------- S4 ----------
+  subgraph cluster_S4 {
+    label="S4 撰稿"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S4n [label="撰稿师·叙事底稿\n每问五段白话\n零公式/缩写/流程词"];
+    G叙事 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="叙事门\n机械检"];
+    S4a [label="撰稿师·论点脊柱\n发现→证据→含义"];
+    S4b [label="主控tex+分章撰稿 ∥\n表达四律·段级 % src"];
+    S4c [label="章评循环 ∥ + 闭卷读者腿\nAI味/跳步/溯源·范文对照\n定向修订·变化守卫·回退"];
+    S4t [label="统稿师·全稿语言统一\n统稿守卫：数字/引用/公式/标题不变\n否则整份回退"];
+    S4d [label="摘要蜂群：5变体 ∥\n+审稿员融合·画像门·读者复述"];
+    S4n -> G叙事 -> S4a -> S4b -> S4c -> S4t -> S4d;
+  }
+  G4 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="G4 成稿门\n编译修复+审计+门检"];
+
+  // ---------- S5 ----------
+  subgraph cluster_S5 {
+    label="S5 审稿场（收敛=台账阻塞级清零，分数只做诊断）"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S5a [label="每轮前置\n编译+渲染页+审计+G4"];
+    S5b [label="五路并审 ∥\n评委A/B·硬伤猎手\n评委模拟(看图)·审计"];
+    S5c [label="台账\n回执·配对裁定·熔断·回退"];
+    S5d [label="分级修订 算→图→文\n算=回炉S2+红队+级联"];
+    S5e [label="摘要定稿\n评委30秒复述验收+画像门"];
+    S5f [label="美化循环 ∥\n严重度派单·页数守卫"];
+    S5a -> S5b -> S5c;
+    S5c -> S5d [label="未收敛", fontsize=9];
+    S5d -> S5a [label="下一轮", fontsize=9, style=dashed, constraint=false];
+    S5c -> S5e [label="收敛", fontsize=9];
+    S5e -> S5f;
+  }
+  G5 [shape=diamond, fillcolor="#fdeaea", color="#c05050", label="G5 出版门\n台账视图防篡改\n封死逃生路径"];
+
+  // ---------- S6 ----------
+  subgraph cluster_S6 {
+    label="S6 出版+复盘"; fontname="FandolHei"; fontsize=12; color="#4a6fa5"; style="rounded";
+    S6a [label="逐页终审\n→终审整改"];
+    S6b [label="出版\n终编译+全门重检+收割"];
+    S6c [label="复盘官\n复盘报告(规则建议≥3)"];
+    S6a -> S6b -> S6c;
+  }
+  产出 [shape=folder, fillcolor="#e6f4e2", color="#4a8a3f", label="论文 PDF\ntex+图+全套过程文件"];
+
+  // ---------- 主链 ----------
+  输入 -> S0a;
+  S0c -> G0;
+  G0 -> S1a [label="过"];
+  S1d -> G1;
+  G1 -> S2a [label="过"];
+  S2d -> G2 [label="对齐", fontsize=9];
+  S2e -> G2;
+  G2 -> S3a [label="逐问"];
+  S3b -> G3;
+  G3 -> S4n;
+  S4d -> G4;
+  G4 -> S5a;
+  S5f -> G5;
+  G5 -> S6a [label="过"];
+  S6c -> 产出;
+
+  // ---------- 贯穿机制（独立图例，不连边） ----------
+  subgraph cluster_贯穿 {
+    label="贯穿机制"; fontname="FandolHei"; fontsize=12; color="#999999"; style="rounded,dashed";
+    护栏 [shape=note, fillcolor="#fff0e6", color="#c07830",
+         label="预算护栏：380腿/20h\n超支→应急出版\n（编译现有稿+收割）"];
+    底座 [fillcolor="#eeeeee", color="#888888",
+         label="底座：本地蜂巢（工作根=蜂巢镜像）\n腿=本机codex(gpt-6-astra)·seatbelt锁工作根\n判死=kill -0三态(死亡即时回收重派)\n状态机断点续跑·回路协议(台账/回执/裁定/熔断)"];
+    回路注 [shape=note, fillcolor="#eef7ee", color="#5a8a50",
+         label="评审循环统一协议（S3图评/S4章评/S5审稿）\n意见有身份·修改只动点名处\n先相对后绝对·更差即回退"];
+    护栏 -> 底座 -> 回路注 [style=invis];
+  }
+}

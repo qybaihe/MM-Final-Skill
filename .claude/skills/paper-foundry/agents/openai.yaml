@@ -1,0 +1,4 @@
+interface:
+  display_name: "论文铸造厂"
+  short_description: "体检、开炉、监督、停跑切换、改提示词与收尾一炉数模论文流水线（蜂群驾驶）"
+  default_prompt: "用 $paper-foundry：先 体检.sh，再开炉并监督 真题测试/输入 → 真题测试/成品_新炉（标准档，并发 4），按监督清单处置异常，跑完用 跑后指标.py 算回流账并按模板出交付报告。"

@@ -1,0 +1,469 @@
+\subsection{问题二源码：变投影与重采样}
+\label{sec:q2-source}
+
+同片双角的复核从共同波数坐标开始：先确定哪些连续区段参与拟合、校准和测试，再核对厚度及预测误差。这里的重采样指保留原坐标的选点与连续留段重估，训练、校准、测试各自承担不同任务。
+
+共同窗口取$1200$--$3800\,\mathrm{cm}^{-1}$，两角同步保留$480$个原始坐标点。图\ref{fig:split}标出的边界与表\ref{tab:05}的选段口径共同确定了比较对象；选点改变计算规模，波数值和反射率原值保持不变。
+% src:求解/问题2/结果/数据审查.json:主窗口_cm^-1;抽样点数_每角度;抽样索引
+
+连续区段而非相邻行的随机混合构成测试单位。每块含$40$个坐标点，训练点与训练、非训练区段交界的距离至少为$20\,\mathrm{cm}^{-1}$；表\ref{tab:q2-app-split}列出两角同步使用的块号，保护带内的训练点被排除。
+% src:求解/问题2/结果/数据审查.json:抽样索引
+% src:求解/问题2/结果/基准交接.json:折分;训练保护带_cm^-1
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.08\textwidth}>{\centering\arraybackslash}p{0.40\textwidth}>{\centering\arraybackslash}p{0.20\textwidth}>{\centering\arraybackslash}p{0.20\textwidth}}
+\caption{两角同步留段的完整块号}\label{tab:q2-app-split}\\
+\toprule
+折号 & 训练块 & 校准块 & 测试块 \\
+\midrule
+\endfirsthead
+\toprule
+折号 & 训练块 & 校准块 & 测试块 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+一 & $1,2,4,5,7,8,10,11$ & $3,9$ & $6,12$ \\
+二 & $2,3,5,6,8,9,11,12$ & $4,10$ & $1,7$ \\
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/基准交接.json:折分
+
+边界确定后，坐标中心、半跨度以及反射率的标准化尺度均由训练点确定，校准点只决定预测区间半宽，测试点只评价预测。早期曾比较用原谱相关程度与连续留段表现判断可靠性：原谱相关系数达到$0.9987$，但两角来自同一晶圆，因此改为同波数共同分组，以留出光谱的表现检验模型。这一取舍把共享厚度的物理要求与独立检验的统计要求分开，也确定了后续参数估计的数据边界。
+% src:交接/实验记录.json:50.尝试;50.现象;50.决定
+
+双角色散消干扰让两种角度共同决定厚度和低维折射变化，让每个角度自己解释慢变基线、振幅和固定相位。变投影就是给定厚度与折射特性后，先从观测中直接求出基线、振幅，再搜索较少的物理参数；本题两角条纹位置接近而反射率水平不同，恰好需要把这两类参数分开。
+
+厚度记为$d$，单位为微米；参考折射率$n_0$和色散系数$c$均为无量纲量。各角常相位记为$\psi_\theta$，以弧度计，$\theta$表示外部入射角。表\ref{tab:q2-app-search}固定了这些量的取值范围和搜索尺度：全量主搜索完成$864$组粗网格组合，普通扰动比较保持相同网格，避免把计算精细程度的变化混入物理假设比较。
+% src:交接/计划.json:问题清单.1.建模步骤
+% src:求解/问题2/结果/厚度结果.json:全量拟合参数.粗网格次数
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{longtable}{>{\centering\arraybackslash}p{0.28\textwidth}>{\centering\arraybackslash}p{0.34\textwidth}>{\centering\arraybackslash}p{0.30\textwidth}}
+\caption{共享参数与逐角投影的搜索设置}\label{tab:q2-app-search}\\
+\toprule
+对象 & 取值或设置 & 生效位置 \\
+\midrule
+\endfirsthead
+\toprule
+对象 & 取值或设置 & 生效位置 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+厚度$d$ & $[0.5,40]\,\mu\mathrm{m}$ & 两角共享 \\
+参考折射率$n_0$ & $[1.2,6]$ & 两角共享 \\
+色散系数$c$ & $[-1,1]$ & 两角共享 \\
+色散参考波数 & $2000\,\mathrm{cm}^{-1}$ & 折射率参数化 \\
+传播约束 & $n(\sigma)>\sin15^\circ$ & 窗口两端检查 \\
+基线与幅值阶数 & 二次、一次 & 逐角线性投影 \\
+常相位$\psi_\theta$ & $[0,\pi)$，初查$12$点 & 逐角重估 \\
+相位局部细化 & 初步长$\pi/12$，减半$8$次 & 逐角相位搜索 \\
+训练尺度 & 二次趋势残差四分位距 & 下限$10^{-4}$ \\
+初始折射率 & $2,3,4$ & 与色散起点组合 \\
+初始色散系数 & $-0.5,0,0.5$ & 与厚度网格组合 \\
+主搜索厚度网格 & $96$点 & 全量与主留段 \\
+网格加密对照 & $192$点 & 单独重估厚度 \\
+主搜索局部起点 & 上限$12$个 & 有界局部细化 \\
+局部细化停止设置 & $70$次迭代，容差$10^{-9}$ & 线搜索上限$20$ \\
+五折搜索 & $48$点，至多$4$个起点 & 连续区段重估 \\
+主搜索时限 & 每情景$42\,\mathrm{s}$ & 普通扰动相同 \\
+五折搜索时限 & 每折$30\,\mathrm{s}$ & 独立搜索预算 \\
+总计算时限 & $1080\,\mathrm{s}$ & 逐阶段保存结果 \\
+校准经验分位点 & $0.75$ & 反射率预测半宽 \\
+近等损失阈值 & 最小训练损失的$1.10$倍 & 厚度与折射率剖面 \\
+跨切分判据 & 极差与中位数之比$0.20$ & 厚度稳定性 \\
+\end{longtable}
+\endgroup
+% 参数依据：求解/问题2/求解_问题2.py:BOUNDS;make_fold;fit_angle;search_fold;five_fold_validation;profile
+% src:求解/问题2/结果/厚度结果.json:全量拟合参数
+% src:求解/问题2/结果/验证.json:五折连续留段;五折跨切分稳定性
+% src:求解/问题2/结果/区间覆盖.json:校准经验分位点
+
+有限阶基线与幅值吸收角度差异，常相位则在整段内保持不变；逐点自由相位会把本应由厚度解释的条纹一起吸收，因此未采用这种放宽。经验色散描述的是选定波段内的折射变化，而不是预先已知的材料常数。完整实现保留各角的线性系数、相位、矩阵秩和条件数计算，使共享参数之外的拟合自由度也可逐项复核。
+
+全量非触边代表厚度为$10.80\,\mu\mathrm{m}$，跨连续切分、光学剖面和合法扰动的条件范围为$0.64$--$18.11\,\mu\mathrm{m}$。图\ref{fig:q2-thickness}把点与范围放在同一厚度轴上，表\ref{tab:q2-results}给出正文答案；表\ref{tab:q2-app-parameters}进一步保留全量及主留段的共享参数，同时在表\ref{tab:q2-search-check}保留更低损失的触边候选。
+% src:求解/问题2/结果/厚度结果.json:同片最佳厚度_微米;条件区间_微米
+
+固定点集、模型及参数边界的补查保留全部局部终点与停止原因，清单\ref{lst:q2-search-audit}可复算表\ref{tab:q2-search-check}中的搜索差异。
+
+\begingroup
+\small
+\begin{longtable}{>{\centering\arraybackslash}p{0.20\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}>{\centering\arraybackslash}p{0.16\textwidth}>{\centering\arraybackslash}p{0.15\textwidth}>{\centering\arraybackslash}p{0.16\textwidth}}
+\caption{固定模型下的网格与起点补查}\label{tab:q2-search-check}\\
+\hline
+搜索设置 & 厚度/$\mu\mathrm{m}$ & 参考折射率 & 损失 & 触边状态\\
+\hline
+原$96$点网格 & $10.8035$ & $1.4930$ & $0.2747$ & 无\\
+加密$192$点 & $13.5337$ & $1.2000$ & $0.2744$ & 折射率下界\\
+加密$384$点 & $9.2842$ & $1.7174$ & $0.2750$ & 无\\
+\hline
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/搜索补查.json:候选.0;候选.1;候选.2;候选.3
+
+补查固定每角$480$个原始坐标点，并在原代表解和边界解附近改变厚度起点；局部优化以相对目标变化$10^{-9}$、投影梯度容差$10^{-5}$或最多$70$次迭代结束。所有已得候选共同比较，不能因更密网格单次所得更差便丢弃此前较优点；局部停止也不证明厚度全域唯一。
+% src:求解/问题2/结果/搜索补查.json:固定条件.每角点数;停止条件.函数相对容差;停止条件.默认梯度容差;停止条件.单起点最大迭代;局部终点
+
+局部补查的$28$个终点中，$17$个满足数值停止准则，另$11$个达到迭代上限，后者也完整保留。达到上限的终点与满足停止准则的终点分开登记，补查并未证明各分支均已收敛。边界候选在已得候选中损失最低。原非触边点按前述规则承担比较坐标；训练损失衡量曲线拟合程度，真实厚度的准确性仍需实物标定检验。
+% src:求解/问题2/结果/搜索补查.json:局部停止汇总;补查最低损失候选
+\begingroup
+\renewcommand{\lstlistingname}{清单}
+\lstset{basicstyle=\ttfamily\fontsize{9}{10.5}\selectfont,columns=fullflexible,
+  keywordstyle={},commentstyle={},stringstyle={},
+  keepspaces=true,showstringspaces=false,breaklines=true,
+  breakatwhitespace=false,numbers=left,numberstyle=\fontsize{7}{8}\selectfont\color{gray},
+  stepnumber=5,emptylines=1,
+  numbersep=5pt,xleftmargin=1.5em,frame=single,rulecolor=\color{black},
+  captionpos=t,tabsize=4,aboveskip=4pt,belowskip=4pt}
+\lstinputlisting[language=Python,caption={固定模型的网格与起点补查},label={lst:q2-search-audit}]{../求解/问题2/补查_网格起点.py}
+\endgroup
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}}
+\caption{全量与主留段的共享参数}\label{tab:q2-app-parameters}\\
+\toprule
+拟合对象 & $d/\mu\mathrm{m}$ & $n_0$ & $c$ \\
+\midrule
+\endfirsthead
+\toprule
+拟合对象 & $d/\mu\mathrm{m}$ & $n_0$ & $c$ \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+全量共同样本 & $10.8035$ & $1.4930$ & $-0.2089$ \\
+主留段第一折 & $13.0790$ & $1.2000$ & $-0.1897$ \\
+主留段第二折 & $10.6475$ & $1.6614$ & $-0.1253$ \\
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/厚度结果.json:同片最佳厚度_微米;同片最佳厚度的参考折射率;同片最佳厚度的经验色散系数
+% src:求解/问题2/结果/验证.json:双向留角度冻结诊断
+
+参考折射率与厚度随切分共同移动，说明共享同一块晶圆的约束仍容许不同参数组合。全量厚度重新使用全部共同样本估计，留段厚度则用于检查换一段光谱会产生什么变化；二者分工明确，折间平均不参与全量答案的定义。
+
+五折重估的厚度相对极差为$0.7604$，表\ref{tab:q2-app-fivefold}逐折保留厚度与测试误差。相对极差指最大厚度与最小厚度之差除以中位数，为无量纲量；它直接刻画连续区段改变时厚度分支的移动程度。
+% src:求解/问题2/结果/验证.json:五折跨切分稳定性.相对极差
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.10\textwidth}>{\centering\arraybackslash}p{0.15\textwidth}>{\centering\arraybackslash}p{0.31\textwidth}>{\centering\arraybackslash}p{0.14\textwidth}>{\centering\arraybackslash}p{0.14\textwidth}}
+\caption{连续五折重估的厚度与谱形误差}\label{tab:q2-app-fivefold}\\
+\toprule
+折号 & 测试块 & 训练块 & 厚度/$\mu\mathrm{m}$ & 标准化误差 \\
+\midrule
+\endfirsthead
+\toprule
+折号 & 测试块 & 训练块 & 厚度/$\mu\mathrm{m}$ & 标准化误差 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+一 & $1,2$ & $3,4,5,6,7,8,9,10$ & $13.3683$ & $1.9693$ \\
+二 & $3,4$ & $1,2,5,6,7,8,9,10$ & $10.4926$ & $0.6847$ \\
+三 & $5,6$ & $1,2,3,4,7,8,9,10$ & $6.5335$ & $0.3407$ \\
+四 & $7,8$ & $1,2,3,4,5,6,9,10$ & $13.5109$ & $0.4882$ \\
+五 & $9,10$ & $1,2,3,4,5,6,7,8$ & $5.5322$ & $1.2048$ \\
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/验证.json:五折连续留段
+
+这些切分均以末端块作为校准区，其余训练块还须排除边界保护带。谱形误差较小的切分并没有把厚度聚拢到同一分支，因此厚度对象同时保留全量点、逐折点和条件范围；反射率预测的基线与覆盖检验再回答曲线解释能力的问题。
+
+正式主方法的连续留段标准化均方根误差为$1.2074$，二次趋势基线为$1.4404$，两者均为无量纲量。图\ref{fig:q2-residual}展示局部残差，表\ref{tab:q2-app-scores}把各测试块的主方法与两种基线并排比较；标准化误差是该块反射率均方根误差除以对应角度的训练尺度。
+% src:求解/问题2/结果/验证.json:正式主方法分数_连续留段标准化均方根误差;正式二次趋势基线分数_连续留段标准化均方根误差
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.08\textwidth}>{\centering\arraybackslash}p{0.10\textwidth}>{\centering\arraybackslash}p{0.10\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}>{\centering\arraybackslash}p{0.18\textwidth}}
+\caption{各测试块的主方法与基线误差}\label{tab:q2-app-scores}\\
+\toprule
+折号 & 角度 & 块号 & 主方法 & 二次趋势 & 训练均值 \\
+\midrule
+\endfirsthead
+\toprule
+折号 & 角度 & 块号 & 主方法 & 二次趋势 & 训练均值 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+一 & $10^\circ$ & $6$ & $0.2624$ & $0.7603$ & $1.3219$ \\
+一 & $10^\circ$ & $12$ & $1.0909$ & $1.1170$ & $2.2385$ \\
+一 & $15^\circ$ & $6$ & $0.5014$ & $0.5942$ & $0.9831$ \\
+一 & $15^\circ$ & $12$ & $1.1833$ & $1.1641$ & $2.5130$ \\
+二 & $10^\circ$ & $1$ & $3.1195$ & $3.1543$ & $7.8071$ \\
+二 & $10^\circ$ & $7$ & $0.0810$ & $0.6649$ & $1.1553$ \\
+二 & $15^\circ$ & $1$ & $3.3155$ & $3.4041$ & $8.1029$ \\
+二 & $15^\circ$ & $7$ & $0.1055$ & $0.6641$ & $1.1406$ \\
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/验证.json:分块;基线分块
+
+局部比较揭示平均改善的来源：高波数平缓区的条纹结构能补充二次趋势，而部分末端区段仍出现反向差异。正式平均改善为$16.17\%$，描述的是同样测试块上的谱形预测变化；真实厚度的准确程度需要另有厚度参照。
+% src:求解/问题2/结果/验证.json:正式主方法相对正式二次趋势改善_百分比;分块;基线分块
+
+预测区间检验进一步把拟合曲线与区间宽度分开。每折每角先按校准绝对残差的$75\%$经验分位确定对称半宽，再保持半宽预测测试块；正式测试覆盖率为$49.06\%$。图\ref{fig:q2-coverage}中的覆盖差异可由表\ref{tab:q2-app-coverage}的逐块计数复核，误差与半宽均换算为反射率百分点。
+% src:求解/问题2/结果/区间覆盖.json:校准经验分位点;测试经验覆盖率
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.08\textwidth}>{\centering\arraybackslash}p{0.08\textwidth}>{\centering\arraybackslash}p{0.08\textwidth}>{\centering\arraybackslash}p{0.18\textwidth}>{\centering\arraybackslash}p{0.18\textwidth}>{\centering\arraybackslash}p{0.20\textwidth}}
+\caption{反射率测试误差与区间覆盖计数}\label{tab:q2-app-coverage}\\
+\toprule
+折号 & 角度 & 块号 & 均方根误差 & 区间半宽 & 覆盖数/点数 \\
+\midrule
+\endfirsthead
+\toprule
+折号 & 角度 & 块号 & 均方根误差 & 区间半宽 & 覆盖数/点数 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+一 & $10^\circ$ & $6$ & $0.1776$ & $0.4869$ & $40/40$ \\
+一 & $10^\circ$ & $12$ & $0.7384$ & $0.4869$ & $0/40$ \\
+一 & $15^\circ$ & $6$ & $0.3600$ & $0.4941$ & $32/40$ \\
+一 & $15^\circ$ & $12$ & $0.8497$ & $0.4941$ & $0/40$ \\
+二 & $10^\circ$ & $1$ & $1.7278$ & $0.2346$ & $4/40$ \\
+二 & $10^\circ$ & $7$ & $0.0449$ & $0.2346$ & $40/40$ \\
+二 & $15^\circ$ & $1$ & $1.7860$ & $0.2692$ & $1/40$ \\
+二 & $15^\circ$ & $7$ & $0.0568$ & $0.2692$ & $40/40$ \\
+合计 & --- & --- & --- & --- & $157/320$ \\
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/验证.json:分块
+% src:求解/问题2/结果/区间覆盖.json:测试点数;测试经验覆盖率
+
+同一校准半宽在不同测试区段的覆盖表现分化，反映的是残差随波数位置改变，不能通过把全部相邻点当成独立重复来消除。厚度条件范围来自切分、剖面与物理情景的并集；反射率预测区间来自校准残差，两种范围始终对应不同对象。
+
+留角度对照保留来源相位后，首个测试区段的双向标准化误差分别为$3.4568$和$2.9647$。表\ref{tab:q2-app-angle}与图\ref{fig:q2-angle}保留这种区段差异：共享厚度、参考折射率和色散取自主留段的双角联合拟合，来源角度的常相位固定，目标角度只重新估计有限阶基线与幅值。
+% src:求解/问题2/结果/验证.json:双向留角度冻结诊断.4;双向留角度冻结诊断.6
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.10\textwidth}>{\centering\arraybackslash}p{0.15\textwidth}>{\centering\arraybackslash}p{0.315\textwidth}>{\centering\arraybackslash}p{0.315\textwidth}}
+\caption{固定来源相位后的双向留角度误差}\label{tab:q2-app-angle}\\
+\toprule
+折号 & 测试块 & $10^\circ\!\to15^\circ$ & $15^\circ\!\to10^\circ$ \\
+\midrule
+\endfirsthead
+\toprule
+折号 & 测试块 & $10^\circ\!\to15^\circ$ & $15^\circ\!\to10^\circ$ \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+一 & $6$ & $0.5013$ & $0.2573$ \\
+一 & $12$ & $1.1858$ & $1.0867$ \\
+二 & $1$ & $3.4568$ & $2.9647$ \\
+二 & $7$ & $0.1678$ & $0.2494$ \\
+\end{longtable}
+\endgroup
+% src:求解/问题2/结果/验证.json:双向留角度冻结诊断
+
+方向比较检查的是联合参数与来源相位向另一角度的迁移，区别于完全舍弃目标角度后重新确定厚度。至此，点估计、跨切分变化、谱形基线与覆盖计数各有对应对象；问题三沿用相同坐标、切分和评分单位比较多次往返的作用。
+
+清单\ref{lst:q2-complete}节录连续留段、逐角投影与分块评分；完整可执行程序随附于\path{求解/问题2/求解_问题2.py}。
+
+\begingroup
+\renewcommand{\lstlistingname}{清单}
+\lstset{basicstyle=\ttfamily\fontsize{9}{10.5}\selectfont,columns=fullflexible,
+  keywordstyle={},commentstyle={},stringstyle={},
+  keepspaces=true,showstringspaces=false,breaklines=true,
+  breakatwhitespace=false,numbers=left,numberstyle=\fontsize{7}{8}\selectfont\color{gray},
+  stepnumber=5,emptylines=1,
+  numbersep=5pt,xleftmargin=1.5em,frame=single,rulecolor=\color{black},
+  captionpos=t,tabsize=4,aboveskip=0.8em,belowskip=0.8em}
+\lstinputlisting[language=Python,linerange={166-251,408-473},caption={双角投影与留段评分核心实现},label={lst:q2-complete}]{../求解/问题2/求解_问题2.py}
+\endgroup
+
+逐角系数的复核采用清单\ref{lst:q2-check}：固定本次保存的全精度共享参数，恢复各角常相位、基线系数、幅值系数与训练尺度，并逐点核对测试预测。它同时核对保护带、块级评分、覆盖计数、条件范围和五折相对极差，保留原计算结果不变；执行位置为原始附件、求解和交接目录的共同上级。
+
+\begingroup
+\renewcommand{\lstlistingname}{清单}
+\lstset{basicstyle=\ttfamily\bfseries\footnotesize,columns=fullflexible,
+  keywordstyle={},commentstyle={},stringstyle={},
+  keepspaces=true,showstringspaces=false,breaklines=true,
+  breakatwhitespace=false,numbers=left,numberstyle=\ttfamily\bfseries\tiny\color{black},
+  numbersep=5pt,xleftmargin=1.5em,frame=single,rulecolor=\color{black},
+  captionpos=t,tabsize=4,aboveskip=0pt,belowskip=0pt}
+\begin{lstlisting}[language=bash,caption={完整参数恢复与逐块结果核对命令},label={lst:q2-check}]
+python3 - <<'PY'
+import importlib.util
+import json
+import signal
+import time
+from pathlib import Path
+
+import numpy as np
+
+signal.alarm(60)
+started = time.monotonic()
+root = Path.cwd()
+result_dir = root / "求解/问题2/结果"
+module_spec = importlib.util.spec_from_file_location(
+    "appendix_problem_two", root / "求解/问题2/求解_问题2.py"
+)
+solver = importlib.util.module_from_spec(module_spec)
+module_spec.loader.exec_module(solver)
+
+def read_result(name):
+    return json.loads((result_dir / name).read_text(encoding="utf-8"))
+
+def parameter_record(name, fold, candidate):
+    angle_records = []
+    for angle_data, model in zip(fold["angles"], candidate["模型"]):
+        angle_records.append({
+            "角度_度": model["角度_度"],
+            "常相位_弧度": model["相位_rad"],
+            "基线系数_常数至二次": model["系数"][:3].tolist(),
+            "幅值系数_常数至一次": model["系数"][3:].tolist(),
+            "训练尺度_比例": angle_data["scale"],
+            "矩阵秩": model["秩"],
+            "矩阵条件数": model["条件数"],
+        })
+    return {
+        "拟合对象": name,
+        "共享参数顺序": ["厚度_微米", "参考折射率", "色散系数"],
+        "共享参数": list(candidate["参数"]),
+        "坐标中心_每厘米": fold["center"],
+        "坐标半跨度_每厘米": fold["half_span"],
+        "训练点数_每角": len(fold["train_indices"]),
+        "逐角参数": angle_records,
+    }
+
+thickness = read_result("厚度结果.json")
+validation = read_result("验证.json")
+coverage = read_result("区间覆盖.json")
+benchmark = read_result("基准交接.json")
+coordinates, values, source_rows, datasets, audit = solver.read_inputs()
+assert source_rows == benchmark["抽样源行"]
+assert len(coordinates) == benchmark["抽样点数_每角度"]
+np.testing.assert_array_equal(
+    coordinates, [entry["波数_cm^-1"] for entry in audit["抽样索引"]]
+)
+
+all_parameters = []
+rebuilt_blocks = []
+rebuilt_baselines = []
+for fold_spec in benchmark["折分"]:
+    fold = solver.make_fold(coordinates, values, fold_spec)
+    for edge in fold["guard_edges"]:
+        distances = np.abs(coordinates[fold["train_indices"]] - edge)
+        assert np.min(distances) >= benchmark["训练保护带_cm^-1"]
+    saved = next(
+        item for item in validation["双向留角度冻结诊断"]
+        if item["折号"] == fold_spec["折号"]
+    )
+    shared = (
+        saved["冻结厚度_um"], saved["冻结参考折射率"],
+        saved["冻结色散系数"],
+    )
+    candidate = solver.fit_candidate(shared, fold)
+    all_parameters.append(parameter_record(fold_spec["折号"], fold, candidate))
+    rebuilt_blocks.extend(solver.score_blocks(fold, candidate))
+    rebuilt_baselines.extend(solver.baseline_blocks(fold))
+
+for rebuilt in rebuilt_blocks:
+    saved = next(
+        item for item in validation["分块"]
+        if all(item[key] == rebuilt[key]
+               for key in ("折号", "角度_度", "测试块"))
+    )
+    for key in ("波数_cm^-1", "预测反射率_比例", "标准化均方根误差",
+                "训练尺度_比例", "区间半宽_比例", "经验覆盖率"):
+        np.testing.assert_allclose(rebuilt[key], saved[key], rtol=1e-8, atol=1e-10)
+
+main_score = np.mean([item["标准化均方根误差"] for item in rebuilt_blocks])
+baseline_score = np.mean([
+    item["标准化均方根误差"] for item in rebuilt_baselines
+    if item["基线"] == "训练二次趋势"
+])
+improvement = 100 * (baseline_score - main_score) / baseline_score
+for actual, key in (
+    (main_score, "正式主方法分数_连续留段标准化均方根误差"),
+    (baseline_score, "正式二次趋势基线分数_连续留段标准化均方根误差"),
+    (improvement, "正式主方法相对正式二次趋势改善_百分比"),
+):
+    np.testing.assert_allclose(actual, validation[key], rtol=1e-8)
+
+covered = sum(
+    np.count_nonzero(np.abs(np.asarray(item["残差_比例"]))
+                     <= item["区间半宽_比例"])
+    for item in rebuilt_blocks
+)
+test_count = sum(item["点数"] for item in rebuilt_blocks)
+assert test_count == coverage["测试点数"]
+np.testing.assert_allclose(covered / test_count, coverage["测试经验覆盖率"])
+five_thicknesses = np.asarray(thickness["五折条件厚度_微米"])
+relative_range = np.ptp(five_thicknesses) / np.median(five_thicknesses)
+np.testing.assert_allclose(
+    relative_range, validation["五折跨切分稳定性"]["相对极差"]
+)
+range_members = [
+    value for group in thickness["条件区间组成"].values() for value in group
+]
+np.testing.assert_allclose(
+    [min(range_members), max(range_members)], thickness["条件区间_微米"]
+)
+
+full_fold = solver.full_fold(coordinates, values)
+full_shared = (
+    thickness["同片最佳厚度_微米"],
+    thickness["同片最佳厚度的参考折射率"],
+    thickness["同片最佳厚度的经验色散系数"],
+)
+full_candidate = solver.fit_candidate(full_shared, full_fold)
+all_parameters.append(parameter_record("全量", full_fold, full_candidate))
+summary = {
+    "完整参数": all_parameters,
+    "逐块评分": [
+        {key: item[key] for key in (
+            "折号", "角度_度", "测试块", "点数", "标准化均方根误差",
+            "均方根误差_比例", "区间半宽_比例", "经验覆盖率",
+        )} for item in rebuilt_blocks
+    ],
+    "主方法误差": float(main_score),
+    "二次趋势误差": float(baseline_score),
+    "改善率_百分比": float(improvement),
+    "覆盖点数": int(covered),
+    "测试点数": int(test_count),
+    "五折相对极差": float(relative_range),
+    "条件范围_微米": thickness["条件区间_微米"],
+    "用时_秒": time.monotonic() - started,
+}
+print(json.dumps(summary, ensure_ascii=False, indent=2))
+print("复核摘要：共同坐标、完整参数、逐块预测与正式汇总一致。")
+signal.alarm(0)
+PY
+\end{lstlisting}
+\endgroup
+
+重新计算全部情景采用清单\ref{lst:q2-run}，原始附件与输入档案保持原位，输出包括各阶段结果和计算摘要。该计算与固定参数复核承担不同任务：前者重新搜索，后者检查本文所列数值能否由保存的参数与观测重建。
+
+\begingroup
+\renewcommand{\lstlistingname}{清单}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  keywordstyle={},commentstyle={},stringstyle={},
+  keepspaces=true,showstringspaces=false,breaklines=true,
+  breakatwhitespace=false,numbers=none,frame=single,captionpos=t,
+  aboveskip=0pt,belowskip=0pt,abovecaptionskip=2pt,belowcaptionskip=2pt}
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=bash,caption={全部情景的重新计算命令},label={lst:q2-run}]
+python3 求解/问题2/求解_问题2.py
+\end{lstlisting}
+\end{minipage}
+\endgroup
+
+完整实现以原始附件重建全部中间量；逐块数值则保留本次正式计算的结果。后续补充材料据此索引原始行号和全部比较，使同一厚度及其预测表现始终能够追溯到同一组观测。
+
+问题二完整源码统一见清单\ref{lst:q2-complete}，重新计算命令见清单\ref{lst:q2-run}。

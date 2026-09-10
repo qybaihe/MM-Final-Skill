@@ -1,0 +1,30 @@
+{
+  "页问题": [
+    {
+      "页": 43,
+      "严重度": 2,
+      "问题": "物理第43—49页连续刊印同一代码清单的后半部，至少六整页没有解释性正文，阅读节奏单一。源码核实，lst:full-q1 的634行与前文 lst:q1-complete 引入的求解文件逐字一致，属于重复占页，而非必须保留的新增复现内容。第44页底还只留下 apparent_dq 的函数声明，函数说明与实现转到第45页。",
+      "修改指令": "论文/8.1.问题一源码.tex 中删除第219行起的 \\subsubsection{问题一完整源码}、随后说明句及 label={lst:full-q1} 的整个 lstlisting 环境；保留第132行 label={lst:q1-complete} 的 \\lstinputlisting，不删求解脚本。全论文若有 \\ref{lst:full-q1}，改为 \\ref{lst:q1-complete}。这同时消除所附七页的重复源码与第44页底的函数声明孤行，直接减少页数，不另插分页命令。"
+    },
+    {
+      "页": 50,
+      "严重度": 2,
+      "问题": "第50页下半部的新代码清单重新使用蓝绿着色与带阴影边框；与第43—49页一样，拉开的西文字距和中文字符串形成明显纹理差异。源码显示 lst:q2-search-audit 没有局部样式，继承 format.cls 的 shadowbox 默认值，而前文问题一清单已有单线、无彩色、fullflexible 的局部设置，附录样式不统一。",
+      "修改指令": "论文/8.2.问题二源码.tex 中仅将第93行 label={lst:q2-search-audit} 的 \\lstinputlisting 包在 \\begingroup 与 \\endgroup 内，在前面加入 \\lstset{basicstyle=\\ttfamily\\footnotesize,columns=fullflexible,keepspaces=true,keywordstyle={},commentstyle={},stringstyle={},frame=single,framerule=0.3pt,rulecolor=\\color{black!45},numbers=left,numberstyle=\\tiny,numbersep=5pt,xleftmargin=1.5em,breaklines=true,breakatwhitespace=false,aboveskip=4pt,belowskip=4pt}，与保留的 lst:q1-complete 对齐。沿用已按文件名配置的等宽字体，不改 fontspec 字体声明；不增加字号或行距，取消阴影并收紧上下间距，避免增页。"
+    },
+    {
+      "页": 49,
+      "严重度": 2,
+      "问题": "第49页代码结束后出现英文“Listing 6”和含长路径的底置小号标题，紧接中文8.2节标题；与表24、表25的中文标题及源码中其他“清单”的顶置标题不一致。第50页开始的补查清单也未显式设置中文名称与顶置标题。",
+      "修改指令": "先执行重复清单删除，不单独修饰将被删除的 Listing 6。随后在论文/8.2.问题二源码.tex 中 lst:q2-search-audit 的局部分组内加入 \\renewcommand{\\lstlistingname}{清单} 及 \\lstset{captionpos=t}，保留现有简短中文 caption={固定模型的网格与起点补查}，不把文件路径追加进标题。在该分组内设 \\captionsetup[lstlisting]{font=small,labelsep=quad,skip=3pt}；使用上一条的4pt上下间距，并以删除重复634行源码作为标题字号变化的配套压缩，整稿页数不得超过原版。"
+    },
+    {
+      "页": 50,
+      "严重度": 1,
+      "问题": "表25“共享参数与逐角投影的搜索设置”没有越界，但23条设置连续堆排，三列全部居中使长短文字左右起点不断变化；中列“相位局部细化”“训练尺度”等设置较长，逐行查阅不够利落。",
+      "修改指令": "论文/8.2.问题二源码.tex 中仅将 label={tab:q2-app-search} 所属 longtable 的列格式由三个居中 p{0.28\\textwidth}、p{0.34\\textwidth}、p{0.30\\textwidth} 改为 >{\\raggedright\\arraybackslash}p{0.25\\textwidth}>{\\raggedright\\arraybackslash}p{0.41\\textwidth}>{\\raggedright\\arraybackslash}p{0.26\\textwidth}。保留 \\small、\\arraystretch=1.12、现有三线表和行内容；三列总宽仍为0.92\\textwidth，中列加宽减少潜在折行，不加分组空行、不放大整表、不另起页。"
+    }
+  ],
+  "总体评价": "仅审查用户所附物理第43—50页（页脚编号42—49）并核对当前tex，未修改或重新编译论文。本任务未附上一轮台账，不作配对裁定。八页未见明确越出版心、公式编号异常或页尾悬空节标题；第49页8.2节下已有多段正文和表24，表24、表25与首次引用相邻，不能误报为浮动体失控。此组没有插图或独立行间公式，图字号和公式溢出项目不适用。主要缺点是重复整段源码造成连续多页代码墙，以及代码清单名称、边框、配色和标题位置不统一；表25只需轻量调整。按严重度排序给出四项，不将同一跨页问题逐页重复计数；所有指令以删重和局部样式统一为主，不引入强制分页、强制浮动位置或通栏放大。美观分只评价本次八页，不代表全稿。",
+  "美观分": 7.0
+}

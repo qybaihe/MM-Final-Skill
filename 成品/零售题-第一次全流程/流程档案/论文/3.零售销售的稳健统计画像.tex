@@ -1,0 +1,89 @@
+\section{订单—月份双尺度的销售结构画像}
+\label{sec:robust-profile}
+
+\subsection{双尺度口径与稳健统计量}
+
+原始表的一行对应订单中的一种商品，销售总量应在明细层累加，交易规模则应先按订单归并。设第 $i$ 条明细的销售额为 $x_i$，订单 $o$ 所含明细集合为 $\mathcal I_o$，月份 $t$ 所含明细集合为 $\mathcal I_t$，定义
+\begin{equation}
+S=\sum_i x_i,\qquad A_o=\sum_{i\in\mathcal I_o}x_i,\qquad M_t=\sum_{i\in\mathcal I_t}x_i .
+\label{eq:q1-scales}
+\end{equation}
+其中，$S$ 表示全期销售总额，$A_o$ 表示订单销售额，$M_t$ 表示月销售额。治理后的数据含 $9799$ 条商品明细，总销售额为 $2261255.411$，按订单号去重得到 $4921$ 张订单，标准化客户编号后有 $793$ 位有效客户，按产品编号计有 $1861$ 种产品。% src:求解/问题1/结果/核心统计与业务指标.json:治理后业务指标
+
+本题明细销售额的右尾很长，均值不宜单独承担“典型交易”的解释。我们同时保留均值以守住总量可加性，以中位数描述典型水平，并用高位样本销售占比衡量集中程度\cite{tukey1977eda}。两个业务尺度的结果列于表\ref{tab:q1-robust-stat}。
+
+\begin{longtable}{>{\centering\arraybackslash}p{0.14\textwidth}>{\centering\arraybackslash}p{0.16\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}>{\centering\arraybackslash}p{0.20\textwidth}}
+\caption{明细层与订单层的稳健销售统计}\label{tab:q1-robust-stat}\\
+\toprule
+统计尺度 & 观测数 & 均值 & 中位数 & 最高一成占比 \\
+\midrule
+\endfirsthead
+\multicolumn{5}{c}{续表~\thetable}\\
+\toprule
+统计尺度 & 观测数 & 均值 & 中位数 & 最高一成占比 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+商品明细 & $9799$ & $230.764$ & $54.480$ & $60.40\%$ \\ % src:求解/问题1/结果/核心统计与业务指标.json:明细层Sales分布
+订单汇总 & $4921$ & $459.511$ & $151.930$ & $53.14\%$ \\ % src:求解/问题1/结果/核心统计与业务指标.json:订单层销售额分布
+\end{longtable}
+
+明细均值约为中位数的 $4.24$ 倍，偏度为 $12.983$，基尼系数为 $0.744$；订单归并后偏度仍为 $8.347$，说明长尾不是同单多行造成的表面现象。% src:求解/问题1/结果/核心统计与业务指标.json:明细层Sales分布;订单层销售额分布
+图\ref{fig:q1-sales-distribution}在原尺度经验分布中保留极端销售额，又用 $\log(1+x)$ 展开主体区域；变换后的明细偏度降至 $0.281$，后续涉及分布比较时据此采用对数或秩统计，而业务总额仍使用原尺度。% src:求解/问题1/结果/核心统计与业务指标.json:明细层Sales分布.log1p偏度
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../求解/问题1/图片/Sales原尺度ECDF—对数密度联合图.png}
+  \caption{销售额原尺度经验分布与对数密度}
+  \label{fig:q1-sales-distribution}
+\end{figure}
+
+第一版统计口径直接用 $9800$ 条明细作为订单数，后来核对发现不同订单号只有 $4921$ 个，朴素口径会高估 $99.15\%$，因此改为按订单号去重，并另算订单层分布。% src:求解/问题1/结果/验证与灵敏度.json:朴素基线;交接/实验记录.json:问题1/订单口径
+长尾结论也未依赖单一阈值：四分位距倍数在 $1.0$ 至 $3.0$ 间变化时，高值明细仍贡献 $70.01\%$ 至 $50.93\%$ 的销售额，故大额记录只标记而不删除。% src:求解/问题1/结果/验证与灵敏度.json:IQR高值阈值灵敏度
+
+\subsection{月度增长与年末季节结构}
+
+订单日期覆盖的 $48$ 个自然月均有销售记录，月度聚合既保留日历周期，又避免日度稀疏波动遮蔽经营节奏。% src:求解/问题1/结果/核心统计与业务指标.json:治理后业务指标
+按月份 $m$ 汇总跨年平均销售额 $\bar M_m$，以全期月均值 $\bar M$ 为基准定义季节指数
+\begin{equation}
+I_m=\frac{\bar M_m}{\bar M}.
+\label{eq:q1-season-index}
+\end{equation}
+其中，$I_m$ 大于单位水平表示该日历月通常处于旺季，小于单位水平表示通常处于淡季。图\ref{fig:q1-monthly-decompose}把原始月销售额、周期趋势、季节分量和剩余波动放在同一视图中，便于区分规模扩张与重复出现的月内节奏。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../求解/问题1/图片/月度销售趋势与季节分解图.png}
+  \caption{月度销售趋势、季节分量与剩余波动}
+  \label{fig:q1-monthly-decompose}
+\end{figure}
+
+年度总量在 $2023$ 年下降 $4.20\%$，随后于 $2024$ 年和 $2025$ 年分别增长 $30.64\%$ 与 $20.30\%$；对应订单数由 $2022$ 年的 $947$ 张增至 $2025$ 年的 $1661$ 张，近两年的扩张因而不只是少数大额明细抬升。% src:求解/问题1/结果/时间结构.json:年度聚合
+季度结构的差异更稳定：第四季度占全期销售额的 $38.52\%$，第一季度仅占 $15.53\%$；分年复核得到各年第四季度与第一季度销售额之比均在 $2.28$ 至 $2.90$ 之间。% src:求解/问题1/结果/时间结构.json:季度季节结构;交接/实验记录.json:问题1/正确性复核的基线与跨年印证
+月份层面，十一月、十二月和九月的全期份额依次为 $15.49\%$、$14.22\%$ 和 $13.27\%$，二月仅为 $2.63\%$，库存与履约准备应覆盖秋季启动和年末集中释放两个阶段。% src:求解/问题1/结果/时间结构.json:日历月份季节结构
+
+\subsection{份额与波动的联合画像}
+
+只按销售份额排序会忽略小规模层级的跳跃风险。对维度 $g$ 的层级 $k$，以完整月份集合 $\mathcal T$ 计算
+\begin{equation}
+p_{gk}=\frac{\sum_{t\in\mathcal T}M_{gkt}}{S},\qquad
+CV_{gk}=\frac{\operatorname{sd}(M_{gk1},\ldots,M_{gkT})}{\operatorname{mean}(M_{gk1},\ldots,M_{gkT})}.
+\label{eq:q1-share-cv}
+\end{equation}
+其中，$p_{gk}$ 是销售份额，$CV_{gk}$ 是月销售额变异系数。某层级无明细的月份在 $M_{gkt}$ 中记为零，因为研究对象是完整经营期，而不是“发生过销售的月份”子样本。
+
+我们最初直接在各层级已有的月记录上计算标准差，但分组汇总会省略无销售月份，从而压低小层级波动；因此改为把每个层级与完整 $48$ 个月做笛卡尔展开，再对缺口补零。% src:交接/实验记录.json:问题1/分组波动口径;求解/问题1/结果/核心统计与业务指标.json:治理后业务指标.覆盖自然月数
+图\ref{fig:q1-share-volatility}保留全部结构层级，用横轴、纵轴和气泡面积分别表示份额、相对波动和明细量。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../求解/问题1/图片/各维度销售份额—波动气泡图.png}
+  \caption{多维销售份额、月度波动与样本规模}
+  \label{fig:q1-share-volatility}
+\end{figure}
+
+产品大类中 Technology、Furniture 与 Office Supplies 的份额分别为 $36.59\%$、$32.21\%$ 和 $31.20\%$，区域上 West 与 East 合计占 $61.00\%$；客户细分以 Consumer 的 $50.77\%$ 为主，发货模式以 Standard Class 的 $59.28\%$ 为主。% src:求解/问题1/结果/多维份额与波动.json:维度画像
+份额较高不等于波动较小：East 的变异系数为 $0.767$，高于 West 的 $0.547$；Home Office 为 $0.799$，高于 Consumer 的 $0.575$。% src:求解/问题1/结果/多维份额与波动.json:维度画像.区域;维度画像.客户细分
+产品子类 Supplies 仅占 $2.05\%$，变异系数却达到 $2.026$，其不稳定性会在细层级独立外推时被放大。% src:求解/问题1/结果/多维份额与波动.json:维度画像.产品子类.各层画像[Supplies]
+这些份额和波动描述回答“销售来自哪里、起伏有多大”，不能单独证明某个标签导致销售增长；驱动判断仍需下一章的效应量、时间外重要性与跨年稳定性共同约束。

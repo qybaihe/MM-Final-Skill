@@ -1,0 +1,54 @@
+{
+  "页问题": [
+    {
+      "页": 44,
+      "严重度": 3,
+      "问题": "物理第44页底仅有‘清单9：全部情景的重新计算命令’题注，唯一一行命令及完整边框却到第45页顶端，题文被直接拆开。这是本轮重排后清单lst:q2-run的题注孤悬，不是旧美-1-53所指复核清单的两行孤尾。",
+      "修改指令": "论文/8.2.问题二源码.tex:422—431中，在lst:q2-run的局部lstset之后、begin{lstlisting}之前加入\\noindent\\begin{minipage}{\\linewidth}，在end{lstlisting}之后加入\\end{minipage}，仅绑定这一行命令及其原caption、label，不绑定其他长清单。此处局部lstset补入aboveskip=0pt,belowskip=0pt,abovecaptionskip=2pt,belowcaptionskip=2pt；同时将紧邻前文lst:q2-check的局部aboveskip、belowskip由0.8em都改为0pt，回收清单前后空白作为绑定题文的空间补偿。保留命令、字号、版心和自然分页，不改成浮动体。重编须看到题注与命令同页，且全篇不超过当前68页；不得用扩大页数换取绑定。"
+    },
+    {
+      "页": 42,
+      "严重度": 2,
+      "对应": "美-1-48",
+      "问题": "第41—42页核心清单的长表达式和结果字典仍发生深缩进后的折行；第42页上端的推导式续行及下半页字典键值分散到多条视觉行，续行与Python真实层次不易区分。第43页顶端只剩该清单最后一句return blocks和底框，进一步暴露纵向利用不佳。未见实证支持代码越出版心。",
+      "修改指令": "论文/8.2.问题二源码.tex:248、262两处分别服务lst:q2-complete、lst:q2-check的局部lstset均加入breakautoindent=false,breakindent=1em,postbreak=\\mbox{\\ensuremath{\\hookrightarrow}\\space}；保留现有basicstyle、columns=fullflexible、keepspaces=true及求解源文件不动。取消自动继承的深缩进，为续行标记及长字典腾出宽度。核心清单另将linerange={166-251,408-473}改为linerange={166-249,408-473}，只去掉已核实为空行的250、251行，不删return或任何可执行代码，回收区段连接处空白。若续行总数反增，先将breakindent降为0.5em，仍反增则撤掉postbreak、保留固定缩进；不要缩小9pt正文或另绑长函数。验收第43页的单句孤尾回排，且清单占页及全篇页数均不增加。"
+    },
+    {
+      "页": 43,
+      "严重度": 2,
+      "对应": "美-1-49",
+      "问题": "第43—44页复核清单仍逐行使用tiny字号的行号，148行的小数字与左框形成密集竖带；与第41—42页每五行一个、7pt字号的核心清单不统一。高清复核确认代码正文已清楚，本条只追问行号辅助功能，不重新提出已消解的西文字形问题。",
+      "修改指令": "仅在论文/8.2.问题二源码.tex:262—267的lst:q2-check局部lstset中，把numberstyle=\\ttfamily\\bfseries\\tiny\\color{black}替换为numberstyle=\\ttfamily\\bfseries\\fontsize{7}{8}\\selectfont\\color{black}，并加入stepnumber=5,numberfirstline=true,numberblanklines=false。保留正文footnotesize、numbersep=5pt和xleftmargin=1.5em；不得放大整个复核清单。此项不增加正文行高或清单宽度，核对三位行号仍在页边距内即可。"
+    },
+    {
+      "页": 45,
+      "严重度": 2,
+      "对应": "美-1-59",
+      "问题": "表32的四组三例仍逐行重复情景名，缺少组间层次；重排后色散失配组的前两例留在第45页，第三例单独落到第46页顶端，而且续页仅有列名、没有表号。旧表内分组问题未消解，现又在同一组内形成一行孤尾。表未越界，两表之间也确有正文，不按浮动体堆叠处理。",
+      "修改指令": "论文/8.3.问题三源码.tex:64—99的tab:q3-known-thickness中，把每种情景前两条数据行的结尾\\\\改为\\\\*，第三条仍用普通换行，禁止在三例组内断页；低损耗、强损耗、无高阶负对照组末各加\\addlinespace[1pt]。在该表endfirsthead之后、续页toprule之前加\\multicolumn{5}{c}{表~\\thetable（续）}\\\\，保留原列名、字号、列宽和全部12条数值，不把整表装入不可分页盒。增加的3pt组距、续题以及最多两行的组内断点回退，配套从lst:q3-complete局部emptylines=1所回收的38个连续冗余空白显示行中预留6个行高；此压缩与美-1-60共用、只实施一次，其余空间供模块导引使用。若不同时压缩源码空白，本条不增加组距和续题。重编要求三例一组不断开、跨页时有续表号，全文不超过68页。"
+    },
+    {
+      "页": 47,
+      "严重度": 2,
+      "对应": "美-1-60",
+      "问题": "第46页下部开始的第三问完整源码，到第47—48页仍只有行号与两侧边框，没有模块导引。实际输入文件为1098行，第47页包含输入读取、第48页进入样本构造，翻页后难以识别所处计算阶段。此为原美-1-60所指同一lst:q3-complete的迁移位置，不是新的一份重复源码。",
+      "修改指令": "论文/8.3.问题三源码.tex:171的lst:q3-complete改成读取同一源文件的五段连续输入：firstline=1,lastline=142,firstnumber=1；firstline=143,lastline=290,firstnumber=143；firstline=291,lastline=544,firstnumber=291；firstline=545,lastline=674,firstnumber=545；firstline=675,lastline=1098,firstnumber=675。第一段保留原caption、label；其余四段不另设caption或label，分别在前面插入一行{\\footnotesize\\bfseries 清单\\ref{lst:q3-complete}（续）：样本、场与响应构造}及同格式的‘条件优化与训练内选择’、‘参数记录与场检验’、‘扰动验证与执行入口’，各行之后用\\par结束。不改源程序、散列和1098行的覆盖范围。共用局部lstset加入emptylines=1，将aboveskip、belowskip从0.8em都改为2pt。已核实可少显示38个连续冗余空白行：其中6个行高留给同报告表32调整，模块标题与新增边界最多使用24个行高，其余留给自动折行调整；不得重复计算这份压缩收益。保留各函数间至多一个空行、原字号、框宽及自然分页，复编总页数不得超过68页。"
+    },
+    {
+      "页": 47,
+      "严重度": 2,
+      "对应": "美-1-61",
+      "问题": "第47—48页第三问源码恢复了逐行tiny行号，左侧形成连续细碎黑带；同一附录前部核心清单已经每五行标号。高清第47页确认英文字符完整可读，不能将579像素宽缩略图的碎点状笔画当作缺字；此项只处理可核实的编号密度和尺度不一致。",
+      "修改指令": "在论文/8.3.问题三源码.tex:165—170、仅用于lst:q3-complete及其分段的局部lstset中加入stepnumber=5,numberfirstline=true,numberblanklines=false，将numberstyle=\\tiny替换为numberstyle=\\ttfamily\\fontsize{7}{8}\\selectfont\\color{black}。保留numbers=left、numbersep=5pt、xleftmargin=1.5em和正文footnotesize；采用模块分段时firstnumber使用每段真实源行号，不从1重新计数。本条不增加正文行距或清单宽度，不改format.cls的文件名字体加载。"
+    },
+    {
+      "页": 48,
+      "严重度": 2,
+      "对应": "美-1-62",
+      "问题": "第48页输入记录、字典和样本构造的长表达式自动折行后仍没有续行符，继承的缩进使部分续行落在页面右侧，容易被读成新语句或新的代码层级。第47页read_sheet末尾也有同类现象；这与原第三问清单的美-1-62为同一问题，不另编号。",
+      "修改指令": "在论文/8.3.问题三源码.tex:165—170用于lst:q3-complete的局部lstset中加入breakautoindent=false,breakindent=1em,postbreak=\\mbox{\\ensuremath{\\hookrightarrow}\\space}，保留breaklines=true、breakatwhitespace=false、columns=fullflexible、keepspaces=true、tabsize=4及真实源码缩进。先以释放深缩进的宽度抵偿续行标记；若仍新增视觉行，只能使用美-1-60共同压缩预算在表32和模块导引之外的剩余空间，不得另称又节省38行。若整篇超过68页，先将breakindent降至0.5em，仍超页则撤掉postbreak，仅保留固定续行缩进；不通过缩字或横向缩放补救。"
+    }
+  ],
+  "总体评价": "审查范围为物理第41—48页（页脚40—47），已先完成十项台账实物裁定及相对版本判断，再提出本轮意见和评分；裁定另见审稿/裁定_美2_6.json。旧版113页、当前68页，重复源码删除与第二问核心节录带来明确改进；十项中九项已消解，补充图证收尾孤图一项仍未消解。该尾图在本任务八页之外，只记入裁定，不混入本组页问题。本组主要扣分为清单9题文跨页、表32末组孤尾、代码折行及行号、模块导航不统一；六条既有问题均沿用原编号，只有清单9题注孤悬为新增。第43页源码孤尾并入第二问折行调整，不重复派单；第46页清单10当前已完整同页，未重报原美-1-58。当前八页无插图或独立编号公式，未发现可确认的版心溢出、正文节标题悬空或图表无正文连续堆叠；代码题注语言均已为中文，编号7至11连续。当前PDF的高清第43、47页证明小预览中的西文碎点不等于PDF缺字，因此不虚报不可读的严重度3缺陷。本轮仅输出审稿和裁定，不修改tex或重新编译；所有修改指令均给出局部位置、稳定标签和不增页的配套手段，实际效果须由修改腿重编验证。",
+  "美观分": 7.0
+}

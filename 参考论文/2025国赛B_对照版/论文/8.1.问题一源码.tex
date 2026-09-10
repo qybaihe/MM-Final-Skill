@@ -1,0 +1,218 @@
+\subsection{问题一源码：两束场与合成验证}
+\label{sec:appendix-q1}
+
+一次往返场展开在本附录中保持原来的光路边界：外延层上表面的直接反射场，与进入外延层、到达衬底界面后返回的首束场相加。空气、外延层和衬底的界面关系沿用图\ref{fig:once-return}，角度与单位沿用表\ref{tab:03}；入射角分别为 $10^\circ$ 和 $15^\circ$，估计反射强度时不加入后续往返的分母。这样，合成检验与真实条纹诊断都从同一个一次返回模型出发。
+% src:数据/问题1_冻结合成输入/合成设计.json:角度_度
+
+直接求光场模平方与展开交叉项之间，最大绝对差为 $1.7\times10^{-16}$，以反射率比例计；厚度输入 $8\,\mu\mathrm{m}$ 时，内部换为 $0.0008\,\mathrm{cm}$，回换后厚度不变。图\ref{fig:field-expansion}中的逐点一致性与表\ref{tab:q1-appendix-checks}的基础核验相互对应，把代数展开和量纲换算分别落到可核对的量上。
+% src:求解/问题1/结果/模型验证.json:场展开一致性最大绝对差_比例;单位换算.输入厚度_微米;单位换算.厚度_厘米;单位换算.回换厚度_微米
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.30\textwidth}>{\centering\arraybackslash}p{0.31\textwidth}>{\centering\arraybackslash}p{0.31\textwidth}}
+\caption{一次返回场的代数与量纲核验}\label{tab:q1-appendix-checks}\\
+\toprule
+核验对象 & 数值或关系 & 核对内容 \\
+\midrule
+\endfirsthead
+\toprule
+核验对象 & 数值或关系 & 核对内容 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+两种强度计算 & $1.7\times10^{-16}$ & 最大绝对差，比例 \\
+零界面返回项 & $0$ & 退化差，比例 \\
+厚度内部换算 & $8\,\mu\mathrm{m}\to0.0008\,\mathrm{cm}$ & 指数中的单位相消 \\
+厚度回换 & $8\,\mu\mathrm{m}$ & 输入与输出一致 \\
+同型峰与峰谷系数 & $5000\,/\,2500$ & 微米输出的换算系数 \\
+\end{longtable}
+\endgroup
+% src:求解/问题1/结果/模型验证.json:场展开一致性最大绝对差_比例;零界面返回项差_比例;单位换算;常折射率退化.同型系数_微米;常折射率退化.峰谷系数_微米
+
+代数核验检查的是同一个物理关系的不同写法，单位核验检查的是传播相位中的长度尺度。它们与材料光学条件的准确程度是两件事；基础关系闭合之后，还要改变已知厚度及光学条件，观察反演是否能回到给定输入。
+
+匹配合成的 $24$ 例情景得到平均厚度绝对相对误差 $0.0008\%$，表\ref{tab:q1-appendix-design}保留了每例输入，而不是只留下一个平均值。表中 $d_*$ 为合成时给定的几何厚度，$n_0$ 为外延层折射率基值，$a_1$ 为折射率随归一化波数线性变化的系数，$s_R$ 为加入相关噪声之前的高斯扰动标准差，按反射率比例计。
+% src:求解/问题1/结果/合成验证.json:分组汇总.共同匹配.案例数;主指标.数值
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.08}
+\begin{longtable}{>{\centering\arraybackslash}p{0.14\textwidth}>{\centering\arraybackslash}p{0.18\textwidth}>{\centering\arraybackslash}p{0.18\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}>{\centering\arraybackslash}p{0.17\textwidth}}
+\caption{已知厚度的共同匹配情景}\label{tab:q1-appendix-design}\\
+\toprule
+情景编号 & $d_*/\mu\mathrm{m}$ & $n_0$ & $a_1$ & $s_R$ \\
+\midrule
+\endfirsthead
+\toprule
+情景编号 & $d_*/\mu\mathrm{m}$ & $n_0$ & $a_1$ & $s_R$ \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+01 & 3 & 2.4 & 0 & 0 \\
+02 & 3 & 2.4 & 0 & 0.001 \\
+03 & 3 & 2.4 & 0.08 & 0 \\
+04 & 3 & 2.4 & 0.08 & 0.001 \\
+05 & 3 & 3.4 & 0 & 0 \\
+06 & 3 & 3.4 & 0 & 0.001 \\
+07 & 3 & 3.4 & 0.08 & 0 \\
+08 & 3 & 3.4 & 0.08 & 0.001 \\
+09 & 8 & 2.4 & 0 & 0 \\
+10 & 8 & 2.4 & 0 & 0.001 \\
+11 & 8 & 2.4 & 0.08 & 0 \\
+12 & 8 & 2.4 & 0.08 & 0.001 \\
+13 & 8 & 3.4 & 0 & 0 \\
+14 & 8 & 3.4 & 0 & 0.001 \\
+15 & 8 & 3.4 & 0.08 & 0 \\
+16 & 8 & 3.4 & 0.08 & 0.001 \\
+17 & 20 & 2.4 & 0 & 0 \\
+18 & 20 & 2.4 & 0 & 0.001 \\
+19 & 20 & 2.4 & 0.08 & 0 \\
+20 & 20 & 2.4 & 0.08 & 0.001 \\
+21 & 20 & 3.4 & 0 & 0 \\
+22 & 20 & 3.4 & 0 & 0.001 \\
+23 & 20 & 3.4 & 0.08 & 0 \\
+24 & 20 & 3.4 & 0.08 & 0.001 \\
+\end{longtable}
+\endgroup
+% src:数据/问题1_冻结合成输入/合成设计.json:基础情景.厚度_微米;基础情景.折射率基值;基础情景.色散斜率;基础情景.噪声标准差_比例
+
+这些情景把厚度、折射率变化与观测扰动分开组合，使无噪声输入和含噪声输入都有对应的比较对象。给定厚度参与光谱生成与误差计算，厚度搜索接收的则是波数、反射率、光学参数和角度，真值不参与搜索位置的选择。
+
+模型失配使平均厚度绝对相对误差升至 $0.3028\%$；这里的失配，是指生成光谱时改变了光学关系，而反演仍按原先关系估计厚度。表\ref{tab:q1-appendix-groups}把这类误差与匹配情景、同谱峰距基线并列，接续表\ref{tab:04}中的方法比较。
+% src:求解/问题1/结果/合成验证.json:分组汇总.模型失配.平均绝对相对误差_百分比
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{>{\centering\arraybackslash}p{0.20\textwidth}>{\centering\arraybackslash}p{0.10\textwidth}>{\centering\arraybackslash}p{0.24\textwidth}>{\centering\arraybackslash}p{0.34\textwidth}}
+\caption{匹配与失配情景的厚度误差}\label{tab:q1-appendix-groups}\\
+\toprule
+情景 & 例数 & 平均误差/\% & 对照条件 \\
+\midrule
+\endfirsthead
+\toprule
+情景 & 例数 & 平均误差/\% & 对照条件 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+共同匹配 & 24 & 0.0008 & 线性色散与已知偏振 \\*
+新增匹配 & 16 & 0.0011 & 曲率、偏振及噪声变化 \\*
+模型失配 & 10 & 0.3028 & 生成与反演的光学条件不同 \\*
+常折射率峰距 & 24 & 2.5875 & 共同匹配光谱的峰距估计 \\
+\end{longtable}
+\endgroup
+% src:求解/问题1/结果/合成验证.json:分组汇总.共同匹配;分组汇总.新增匹配;分组汇总.模型失配;常折射率峰距基线.平均绝对相对误差_百分比
+
+误差分组说明，代数实现一致之后，生成光谱与反演模型之间的差别仍会进入厚度估计。新增情景保留了已知光学条件，失配情景则分别改变色散曲率、偏振、包络、基线、消光及返回次数；其中多次返回改变的是合成观测，估计反射强度的表达式始终停在一次返回。
+
+真实条纹的搜索曾被候选区间限制：早期尝试中，第二角光谱的最优周期恰好落在 $80\,\mathrm{cm}^{-1}$ 的上限，因此扩大周期范围，并把反射率与正余弦项都对同一二次趋势取残差。这项调整把缓慢变化的谱形与条纹振荡分开比较，避免把候选范围的端点当成条纹的周期。
+% src:交接/实验记录.json:492.现象;492.尝试;492.决定
+
+统一处理趋势后的两谱周期分别为 $254.85\,\mathrm{cm}^{-1}$ 和 $256.99\,\mathrm{cm}^{-1}$，对应各自的外部入射角，而非两次独立测厚。其输入保留原始波数坐标与百分数反射率，周期搜索与合成厚度回收分别输出，因而两类数值的参照对象始终清楚。
+% src:求解/问题1/结果/模型验证.json:真实附件诊断.周期_每厘米
+
+两谱有效周期的中位数按 $T=5000/\Delta\sigma$ 换算为 $19.54\,\mu\mathrm{m}$。$T$是有限窗口周期统计量，色散和界面相位贡献未被分离，不能直接解释为$dq$或几何厚度。主文式\eqref{eq:period-equivalent}的局部差商关系说明，厚度乘传播因子的近似还要求色散与界面相位导数项可忽略；把局部关系用于整个窗口，则另需相位斜率近似恒定。这些近似未由本次周期统计验证。
+% src:求解/问题1/结果/模型验证.json:真实附件诊断.周期_每厘米;真实附件诊断.表观光学厚度乘积_dq_微米
+
+完整的计算对应清单\ref{lst:q1-complete}，合成情景的全部参数对应清单\ref{lst:q1-design}。前者包含原始观测读取、界面场、厚度搜索、合成对照、整角度留出及真实周期计算；后者补足相关噪声、偏振和失配生成条件，使平均误差可以追溯到逐例输入。
+
+\begingroup
+\renewcommand{\lstlistingname}{清单}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  keywordstyle={},commentstyle={},stringstyle={},
+  keepspaces=true,showstringspaces=false,breaklines=true,
+  breakatwhitespace=false,numbers=left,numberstyle=\tiny,
+  numbersep=5pt,xleftmargin=1.5em,frame=single,
+  captionpos=t,tabsize=4,emptylines=0,aboveskip=4pt,belowskip=4pt}
+
+\lstinputlisting[language=Python,caption={一次返回场及合成验证的完整实现},label={lst:q1-complete}]{../求解/问题1/求解_问题1.py}
+\Needspace{6\baselineskip}
+\lstinputlisting[language={},caption={合成情景的完整参数},label={lst:q1-design}]{../数据/问题1_冻结合成输入/合成设计.json}
+\endgroup
+
+基础核验可先于全部情景计算执行。清单\ref{lst:q1-unit-command}从原始附件抽取核验坐标，独立比较场平方与展开式，再检查零界面返回项、长度回换以及有吸收时的传播衰减；执行位置为附件、求解与交接目录的共同上级。
+
+\begingroup
+\renewcommand{\lstlistingname}{清单}
+\lstset{basicstyle=\ttfamily\footnotesize,columns=fullflexible,
+  keywordstyle={},commentstyle={},stringstyle={},
+  keepspaces=true,showstringspaces=false,breaklines=true,
+  breakatwhitespace=false,numbers=none,frame=single,
+  captionpos=t,tabsize=4}
+\begin{lstlisting}[language=bash,caption={基础核验执行命令},label={lst:q1-unit-command}]
+python3 - <<'PY'
+import importlib.util
+import math
+import time
+from pathlib import Path
+source = Path("求解/问题1/求解_问题1.py")
+module_spec = importlib.util.spec_from_file_location("q1_model", source)
+model = importlib.util.module_from_spec(module_spec)
+module_spec.loader.exec_module(model)
+model.T0 = time.monotonic()
+parameters = {
+    "折射率基值": 2.8,
+    "色散斜率": 0.08,
+    "色散曲率": 0.0,
+    "垂直偏振权重": 0.5,
+    "消光系数": 0.0,
+    "衬底折射率增量": 0.8,
+}
+rows = model.read_xlsx(Path("数据/附件1.xlsx"))
+coordinates = [row["波数_每厘米"] for row in rows]
+differences = []
+for angle in model.ANGLES:
+    for sigma in coordinates[::32]:
+        for thickness in (3.0, 8.0, 20.0):
+            model.check_budget()
+            direct = model.direct_reflectance(
+                sigma, angle, parameters, thickness, returns=1
+            )
+            expanded = model.expanded_reflectance(
+                model.expanded_coefficients(sigma, angle, parameters),
+                thickness,
+            )
+            differences.append(abs(direct - expanded))
+maximum_difference = max(differences)
+assert maximum_difference < 1e-12
+thickness_um = 8.0
+thickness_cm = thickness_um * 1e-4
+assert math.isclose(thickness_cm, 0.0008, abs_tol=1e-15)
+assert math.isclose(thickness_cm * 1e4, thickness_um, abs_tol=1e-12)
+zero_interface = dict(parameters, 衬底折射率增量=0.0)
+with_echo = model.direct_reflectance(
+    2199.9, 10.0, zero_interface, thickness_um, returns=1
+)
+without_echo = model.direct_reflectance(
+    2199.9, 10.0, zero_interface, thickness_um, returns=0
+)
+assert abs(with_echo - without_echo) < 1e-12
+absorbing = dict(parameters, 消光系数=0.002)
+for angle in model.ANGLES:
+    for sigma in coordinates[::32]:
+        model.check_budget()
+        for surface, echo, repeat, longitudinal in model.interface_components(
+            sigma, angle, absorbing
+        ):
+            assert longitudinal.imag >= 0.0
+            assert abs(model.propagation(sigma, longitudinal, thickness_um)) <= 1.0
+print(f"场展开最大绝对差（比例）：{maximum_difference:.3e}")
+print(f"厚度换算：{thickness_um:g} 微米 = {thickness_cm:g} 厘米")
+print("零界面返回、单位回换和被动传播核验完成")
+PY
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash,caption={全部情景与真实周期的执行命令},label={lst:q1-run-command}]
+test -r "数据/附件1.xlsx" &&
+test -r "数据/附件2.xlsx" &&
+test -r "交接/数据档案.json" &&
+test -r "数据/问题1_冻结合成输入/合成设计.json" &&
+python3 "求解/问题1/求解_问题1.py"
+\end{lstlisting}
+\endgroup
+
+清单\ref{lst:q1-run-command}在同一目录执行全部情景与真实周期计算，并保留逐例估计、分组误差、角度留出和光学参数扰动的结果。至此，一次返回的物理边界、已知厚度回收和真实周期等效量能够分别核对；问题二据此转向同片双角信息的共同约束，而不把合成误差带入真实晶圆的测厚精度。

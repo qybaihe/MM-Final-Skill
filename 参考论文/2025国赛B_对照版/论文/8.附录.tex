@@ -1,0 +1,215 @@
+\section{附录：核心源码与补充数值}
+\label{sec:appendix}
+
+附录把正文的厚度答案、光场公式和对照结果放回各自的数据对象中，便于逐项复核。材料按两束场、同片双角估计和完整往返场的顺序展开，保留计算所需的输入约定与依赖，不用一串外部链接代替计算过程。
+
+原始观测来自4个附件，每谱均有7469个共同波数点；附件的数量与独立晶圆的数量不是同一概念。表\ref{tab:app-products}按材料和计算任务列出产物，使相同名称的厚度结果能够对应到不同问题，而不是脱离点集与模型单独引用。
+% src:交接/数据档案.json:总览.附件总数;总览.四文件共有波数点数
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.18}
+\begin{longtable}{>{\centering\arraybackslash}p{0.18\textwidth}>{\centering\arraybackslash}p{0.34\textwidth}>{\centering\arraybackslash}p{0.40\textwidth}}
+\caption{三问计算产物与复核对象}\label{tab:app-products}\\
+\toprule
+对象 & 产物名称 & 对应内容 \\
+\midrule
+\endfirsthead
+\toprule
+对象 & 产物名称 & 对应内容 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+原始观测 & 附件一至附件四工作簿 & 材料、角度、原始波数与反射率 \\
+输入核对 & \texttt{\detokenize{数据档案.json}} & 附件标识、材料归属与单位 \\
+合成条件 & \texttt{\detokenize{合成设计.json}} & 已知厚度情景及生成参数 \\
+光学情景 & \texttt{\detokenize{路线侦察.json}} & 往返场初始情景及共同约束 \\
+问题一 & \texttt{\detokenize{求解_问题1.py}} & 两束场、合成验证与周期诊断 \\
+问题二 & \texttt{\detokenize{求解_问题2.py}} & 共同厚度、连续留段与条件范围 \\
+问题三 & \texttt{\detokenize{求解_问题3.py}} & 同条件候选整合与两级精修 \\
+问题一 & \texttt{\detokenize{模型验证.json}} & 两束展开、单位与真实谱周期 \\
+问题一 & \texttt{\detokenize{合成验证.json}} & 已知厚度、失配情景与峰距对照 \\
+问题一 & \texttt{\detokenize{独立角度切分验证.json}} & 整角度留出预测及逐例误差 \\
+问题二 & \texttt{\detokenize{厚度结果.json}} & 同片厚度、逐折厚度与条件范围 \\
+问题二 & \texttt{\detokenize{参数剖面.csv}} & 厚度与折射率的近等损失组合 \\
+问题二 & \texttt{\detokenize{验证.json}} & 连续留段、留角度与基线对照 \\
+问题二 & \texttt{\detokenize{基准交接.json}} & 向完整往返比较提供同片基准 \\
+问题三 & \texttt{\detokenize{厚度结果.json}} & 全量硅厚度与碳化硅基准 \\
+问题三 & \texttt{\detokenize{同口径对照.json}} & 逐块误差与有限级数核对 \\
+问题三 & \texttt{\detokenize{条件判定.json}} & 逐附件支持与碳化硅处理依据 \\
+问题二、三 & \texttt{\detokenize{留段预测.csv}} & 原始行号、观测与留出预测 \\
+问题二、三 & \texttt{\detokenize{区间覆盖.json}} & 反射率覆盖的分母与构造 \\
+问题二、三 & \texttt{\detokenize{灵敏度.csv}} & 参数及窗口扰动后的重新估计 \\
+\end{longtable}
+\endgroup
+
+产物按各问所属目录区分，同名记录不相互替代。表中光谱预测误差检验的是曲线解释能力，合成厚度误差检验的是已知光学条件下的反演；两类检验分别保留，避免把曲线贴合程度当成真实晶圆的测厚精度。以下先核对一次返回场，再把共同厚度约束带入实测双角光谱。
+
+问题一的两束场由界面直接反射和从衬底界面返回的部分组成，两者叠加产生条纹。早期尝试曾考虑直接用实测反射率评价绝对厚度误差，但附件没有厚度真值及折射率曲线，因此改用已知光学参数的合成光谱核对反演关系，并把真实光谱的周期诊断单独保留。
+% src:交接/实验记录.json:22.尝试;22.现象;22.决定
+
+真实谱的周期等效量为$19.54\,\mu\mathrm{m}$，而匹配合成情景的平均厚度相对误差为$0.0008\%$；它们分别回答条纹给出了什么量、给定光学条件后能否反推出厚度。表\ref{tab:app-q1}把场的代数核对与厚度比较分开，完整的计算内容见程序\ref{lst:q1-complete}。
+% src:求解/问题1/结果/模型验证.json:真实附件诊断.表观光学厚度乘积_dq_微米
+% src:求解/问题1/结果/合成验证.json:主指标.数值
+
+\begingroup
+\fontsize{8}{9}\selectfont
+\renewcommand{\arraystretch}{1.00}
+\setlength{\LTpre}{2pt}
+\setlength{\LTpost}{2pt}
+\begin{longtable}{>{\centering\arraybackslash}p{0.31\textwidth}>{\centering\arraybackslash}p{0.28\textwidth}>{\centering\arraybackslash}p{0.33\textwidth}}
+\caption{两束场核对与合成误差分项}\label{tab:app-q1}\\
+\toprule
+核对对象 & 数值 & 数值含义 \\
+\midrule
+\endfirsthead
+\toprule
+核对对象 & 数值 & 数值含义 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+场强两种算法 & $1.6653\times10^{-16}$ & 反射率比例的最大绝对差 \\*
+共同匹配情景 & $0.0008\%$ & 平均厚度绝对相对误差 \\*
+新增匹配情景 & $0.0011\%$ & 平均厚度绝对相对误差 \\*
+模型失配情景 & $0.3028\%$ & 平均厚度绝对相对误差 \\*
+常折射率峰距 & $2.5875\%$ & 同组情景的朴素对照 \\*
+双向整角度留出 & $0.0018\%$ & 留出厚度平均相对误差 \\*
+合成锚例扰动 & $6.66$--$10.01\,\mu\mathrm{m}$ & 同一合成观测的重估范围 \\
+\end{longtable}
+% src:求解/问题1/结果/模型验证.json:场展开一致性最大绝对差_比例
+% src:求解/问题1/结果/合成验证.json:主指标.数值;分组汇总.新增匹配.平均绝对相对误差_百分比;分组汇总.模型失配.平均绝对相对误差_百分比;常折射率峰距基线.平均绝对相对误差_百分比
+% src:求解/问题1/结果/独立角度切分验证.json:留出指标.留出厚度预测平均绝对相对误差_百分比
+% src:求解/问题1/结果/灵敏度.json:条件压力范围_微米
+\endgroup
+
+代数一致说明两种场强写法描述的是同一物理对象；失配情景则改变生成光谱的光学条件，检验问题从“计算是否一致”变成“假设改变后厚度如何移动”。因此程序保留两种强度写法、同型峰距基线和整角度留出，而非只展示最小的一项误差。
+
+\begingroup
+\lstset{basicstyle=\ttfamily\scriptsize,frame=single,numbers=left,stepnumber=5,numbersep=6pt,numberstyle=\tiny,breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,captionpos=t,xleftmargin=1.5em,linewidth=\dimexpr\linewidth-1.5em\relax,literate={≥}{{\ensuremath{\geq}}}1 {σ}{{\ensuremath{\sigma}}}1}
+完整实现见清单\ref{lst:q1-complete}，此处不重复列出。
+\endgroup
+
+两束关系转入碳化硅实测谱后，需要让双角共同决定厚度和折射变化，同时让每个角度解释自己的慢变基线、振幅与固定相位。科学尝试比较了这种共享参数方式与逐角厚度简单平均，发现不同波段的反射率起伏差异明显，且缺少折射率曲线，因而保留共同物理参数和逐角低阶响应。
+% src:交接/实验记录.json:34.尝试;34.现象;34.决定
+
+问题二的$10.80\,\mu\mathrm{m}$来自每角480点的共同原坐标样本，并非主窗口全部原始点的另一名称。表\ref{tab:app-q2}同时列出点估计、两折及五折厚度，保持连续区段变化与整体拟合的对应关系。
+% src:求解/问题2/结果/厚度结果.json:同片最佳厚度_微米
+% src:求解/问题2/结果/数据审查.json:抽样点数_每角度
+
+条件范围$0.64$--$18.11\,\mu\mathrm{m}$汇集了数据切分、厚度与折射率补偿关系及合法参数情景，含义是改变这些条件后得到的厚度跨度。它与共同样本的整体拟合并列，说明范围的构造比单次拟合多考虑了哪些变化。
+% src:求解/问题2/结果/厚度结果.json:条件区间_微米;条件区间构造
+
+\begingroup
+\small
+\begin{longtable}{>{\centering\arraybackslash}p{0.24\textwidth}>{\centering\arraybackslash}p{0.31\textwidth}>{\centering\arraybackslash}p{0.37\textwidth}}
+\caption{碳化硅厚度按点集与范围分列}\label{tab:app-q2}\\
+\toprule
+对象 & 厚度$/\mu\mathrm{m}$ & 构造 \\
+\midrule
+\endfirsthead
+\toprule
+对象 & 厚度$/\mu\mathrm{m}$ & 构造 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+同片非触边代表 & $10.80$ & 原搜索代表，另保留触边候选 \\
+两折连续留段 & $13.08,\ 10.65$ & 按各折训练区段重新估计 \\
+五折连续留段 & $13.37,\ 10.49,\ 6.53$ & 前三折的独立拟合厚度 \\
+五折连续留段 & $13.51,\ 5.53$ & 后两折的独立拟合厚度 \\
+条件范围 & $0.64$--$18.11$ & 切分、剖面与合法情景并集 \\
+\end{longtable}
+% src:求解/问题2/结果/厚度结果.json:同片最佳厚度_微米;两折条件厚度_微米;五折条件厚度_微米;条件区间_微米;条件区间构造
+\endgroup
+
+厚度范围与反射率预测覆盖有不同的分母和解释对象。程序\ref{lst:q2-complete}将二者分别计算：厚度范围追踪物理参数随条件的变化，反射率覆盖核对留出光谱点是否落入预测带，后者不会被用来给前者附加概率含义。
+
+\begingroup
+\lstset{basicstyle=\ttfamily\scriptsize,frame=single,numbers=left,stepnumber=5,numbersep=6pt,numberstyle=\tiny,breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,captionpos=t,xleftmargin=1.5em,linewidth=\dimexpr\linewidth-1.5em\relax,literate={≥}{{\ensuremath{\geq}}}1 {σ}{{\ensuremath{\sigma}}}1}
+完整实现见清单\ref{lst:q2-complete}，此处不重复列出。
+\endgroup
+
+共同样本的厚度与条件范围明确后，完整往返场的比较继续沿用相同留出区段，并另建硅的主窗口全量对象。所谓完整往返，就是在首个返回场之后，让后续每轮返回再乘同一衰减和相位因子，最后将所有返回场相加；截去后续返回便恢复两束关系。
+
+硅的全量估计为$2.17\,\mu\mathrm{m}$，所用主窗口每角含5392个原始点。表\ref{tab:app-q3}将它与计划折分放在不同的行，避免把训练区段产生的厚度差异压缩成一个平均值。
+% src:求解/问题3/结果/回炉轮3候选/仲裁闭环/20260910_131501_81623_建模公式/厚度结果.json:核心指标.硅全量完整往返厚度_um
+% src:求解/问题3/结果/公平对照.json:案例.0.每角点数
+
+计划折分每角480点，两次训练得到$1.73\,\mu\mathrm{m}$与$16.04\,\mu\mathrm{m}$，差别指向区段选择对厚度分支的影响。碳化硅保留$10.80\,\mu\mathrm{m}$基准，其共同样本与光学条件不会随硅全量对象的建立而改变。
+% src:求解/问题3/结果/公平对照.json:案例.1.每角点数;案例.2.每角点数
+% src:求解/问题3/结果/回炉轮3候选/仲裁闭环/20260910_131501_81623_建模公式/厚度结果.json:核心指标.硅折1完整往返条件厚度_um;核心指标.硅折2完整往返条件厚度_um;核心指标.碳化硅正式基准厚度_um
+
+\begingroup
+\small
+\begin{longtable}{>{\centering\arraybackslash}p{0.21\textwidth}>{\centering\arraybackslash}p{0.19\textwidth}>{\centering\arraybackslash}p{0.24\textwidth}>{\centering\arraybackslash}p{0.24\textwidth}}
+\caption{两材料厚度保留全量与折分区别}\label{tab:app-q3}\\
+\toprule
+材料与对象 & 点数/角 & 厚度$/\mu\mathrm{m}$ & 模型 \\
+\midrule
+\endfirsthead
+\toprule
+材料与对象 & 点数/角 & 厚度$/\mu\mathrm{m}$ & 模型 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+硅原始全量 & $5392$ & $2.17$ & 完整往返 \\
+硅计划折分 & $480$ & $1.73,\ 16.04$ & 完整往返 \\
+碳化硅基准 & $480$ & $10.80$ & 问题二两束 \\
+碳化硅范围 & $480$ & $0.64$--$18.11$ & 问题二条件并集 \\
+\end{longtable}
+% src:求解/问题3/结果/公平对照.json:案例.0.每角点数;案例.1.每角点数;案例.2.每角点数
+% src:求解/问题3/结果/回炉轮3候选/仲裁闭环/20260910_131501_81623_建模公式/厚度结果.json:核心指标.硅全量完整往返厚度_um;核心指标.硅折1完整往返条件厚度_um;核心指标.硅折2完整往返条件厚度_um;核心指标.碳化硅正式基准厚度_um;核心指标.碳化硅正式条件范围下限_um;核心指标.碳化硅正式条件范围上限_um
+\endgroup
+
+折间厚度的变化对应同一材料更换训练区段，材料之间的差别则对应不同晶圆，二者不能合成一条共同的误差范围。保留这两层区别后，完整往返场与两束场的优劣才有明确的比较对象。
+
+同段比较时，完整往返的标准化反射率误差为1.0231，两束对照为0.9812；实际尝试同时发现硅十度谱存在负改善区段，因此程序保留逐块比较，不让总体平均掩盖局部反向变化。表\ref{tab:app-comparison}保留两问各自的基线尺度，程序\ref{lst:q3-complete}给出对应的往返求和、配对评分和材料处理分支。
+% src:求解/问题3/结果/回炉轮3候选/仲裁闭环/20260910_131501_81623_建模公式/厚度结果.json:分材料验证.硅.逐折汇总.0.平均标准化均方根误差.两束;分材料验证.硅.逐折汇总.0.平均标准化均方根误差.完整往返;分材料验证.硅.逐折汇总.0.平均标准化均方根误差.训练均值;分材料验证.硅.逐折汇总.0.平均标准化均方根误差.二次趋势;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.两束;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.完整往返;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.训练均值;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.二次趋势;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.两束;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.完整往返;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.训练均值;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.二次趋势;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.两束;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.完整往返;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.训练均值;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.二次趋势
+% src:交接/实验记录.json:563.尝试;563.现象;563.决定
+
+\begingroup
+\small
+\begin{longtable}{>{\centering\arraybackslash}p{0.20\textwidth}>{\centering\arraybackslash}p{0.40\textwidth}>{\centering\arraybackslash}p{0.32\textwidth}}
+\caption{连续留段误差按各问基线比较}\label{tab:app-comparison}\\
+\toprule
+问题 & 比较方法 & 标准化反射率误差 \\
+\midrule
+\endfirsthead
+\toprule
+问题 & 比较方法 & 标准化反射率误差 \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+问题二 & 共享厚度两束模型 & $1.2074$ \\
+问题二 & 二次趋势 & $1.4404$ \\
+问题三 & 完整往返场 & $1.0231$ \\
+问题三 & 两束截断场 & $0.9812$ \\
+问题三 & 二次趋势 & $1.4434$ \\
+问题三 & 训练均值 & $2.1929$ \\
+\end{longtable}
+% src:求解/问题2/结果/验证.json:正式主方法分数_连续留段标准化均方根误差;正式二次趋势基线分数_连续留段标准化均方根误差
+% src:求解/问题3/结果/回炉轮3候选/仲裁闭环/20260910_131501_81623_建模公式/厚度结果.json:分材料验证.硅.逐折汇总.0.平均标准化均方根误差.两束;分材料验证.硅.逐折汇总.0.平均标准化均方根误差.完整往返;分材料验证.硅.逐折汇总.0.平均标准化均方根误差.训练均值;分材料验证.硅.逐折汇总.0.平均标准化均方根误差.二次趋势;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.两束;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.完整往返;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.训练均值;分材料验证.硅.逐折汇总.1.平均标准化均方根误差.二次趋势;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.两束;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.完整往返;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.训练均值;分材料验证.碳化硅.逐折汇总.0.平均标准化均方根误差.二次趋势;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.两束;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.完整往返;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.训练均值;分材料验证.碳化硅.逐折汇总.1.平均标准化均方根误差.二次趋势
+\endgroup
+
+总体误差未下降，说明高阶返回没有带来整体预测改善；相干长度、光束空间重叠和仪器分辨率则回答这些返回能否在测量中形成可分辨干涉。两种问题分开计算和记录，碳化硅的处理仍使用问题二基准，逐附件判断和窗口扰动保留在相应产物中。
+
+\begingroup
+\lstset{basicstyle=\ttfamily\scriptsize,frame=single,numbers=left,stepnumber=5,numbersep=6pt,numberstyle=\tiny,breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,captionpos=t,xleftmargin=1.5em,linewidth=\dimexpr\linewidth-1.5em\relax,literate={≥}{{\ensuremath{\geq}}}1 {σ}{{\ensuremath{\sigma}}}1}
+完整实现见清单\ref{lst:q3-complete}，此处不重复列出。
+\endgroup
+
+各问完整程序保留依赖导入、数据读取、核心函数和执行入口。问题三以清单\ref{lst:q3-current}为现行入口，调用清单\ref{lst:q3-complete}的基础引擎和清单\ref{lst:q3-independent}的独立公式；冻结输入及数值对应关系见清单\ref{lst:q3-products}。程序\ref{lst:app-run}列出前两问的执行命令；问题三保持现有附件与碳化硅基准不变，按清单\ref{lst:q3-run}隔离重算，基础引擎不再单独充当现行计算，复算也不自动覆盖本文结果。
+
+\begingroup
+\lstset{basicstyle=\ttfamily\footnotesize,frame=single,numbers=none,breaklines=true,captionpos=t}
+\begin{lstlisting}[language=bash,caption={从工作根执行前两问计算},label={lst:app-run}]
+python3 求解/问题1/求解_问题1.py
+python3 求解/问题2/求解_问题2.py
+\end{lstlisting}
+\endgroup
+
+这些计算入口将模型、点集和结果逐一对应，补充材料再据此展开源行索引、参数对照及逐块数值，而不改变正文已经给出的答案。

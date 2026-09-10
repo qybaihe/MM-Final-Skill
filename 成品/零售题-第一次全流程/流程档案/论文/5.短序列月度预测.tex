@@ -1,0 +1,177 @@
+\section{36个月训练窗下的季节锚定组合预测} % src:交接/计划.json:论文结构[文件名=论文/5.短序列月度预测.tex].章节标题
+
+\subsection{预测口径与短序列约束}
+
+本问把订单明细压缩为自然月总销售额。设第 $t$ 个月的明细集合为 $\mathcal I_t$，月度目标写为
+\begin{equation}
+    y_t=\sum_{i\in\mathcal I_t}Sales_i .
+\end{equation}
+其中，$Sales_i$ 为第 $i$ 条明细的销售额，$y_t$ 为当月全部明细的销售额之和。逐月复核得到从 2022 年 1 月至 2025 年 12 月连续有值的 48 个月序列；前 36 个月用于建模，后 12 个月在锁模前保持封存。% src:求解/问题3/结果/数据切分.json:完整月份数,训练范围,训练月数,测试范围,测试月数
+
+训练期月销售额均值为 42755.650，中位数为 34238.702，取值跨越 4519.892 至 95739.121，变异系数为 0.539。% src:求解/问题3/结果/数据切分.json:训练销售额统计
+本题每个日历月只有 3 个训练观测，却要表达 12 个月季节循环，所以自由度必须让位于季节结构；只依赖近期水平会抹去年末旺季，为每个月单独估计参数又会把偶然波动当作规律。% src:交接/实验记录.json:[问题=问题3/候选复杂度].现象
+
+我们曾检查能否把 $\log(1+y_t)$ 解释为正态化处理，但训练期偏度由原尺度的 0.588 变为对数尺度的 $-0.954$，对称性并未改善。% src:交接/实验记录.json:[问题=问题3/log1p用途].现象
+因此，对数变换只用于压缩大额月份对参数估计的支配，季节朴素、组合权重与误差评价仍在销售额原尺度上完成。令
+\begin{equation}
+    z_t=\log(1+y_t),\qquad
+    S=\frac{1}{n_r}\sum_{t\in\mathcal R}\exp(\widehat\varepsilon_t),\qquad
+    \widehat y_t=\max\{0,\exp(\widehat z_t)S-1\}.
+\end{equation}
+其中，$z_t$ 是压缩尺度序列，$\mathcal R$ 是可用拟合残差集合，$S$ 是 Duan 型 smearing 因子\cite{duan1983smearing}，最后一式同时修正指数反变换偏差并守住销售额非负边界。% src:交接/实验记录.json:[问题=问题3/log1p用途].决定
+
+\subsection{季节锚与低自由度修正模型}
+
+季节朴素直接复制上一年同月，是本题方差最低且业务含义最清楚的硬基线\cite{hyndman2021forecasting}。三月移动平均与历史同月均值只作交叉印证：前者不含年度季节位置，后者会削弱近期水平变化；主组合只保留季节朴素作为稳定锚。% src:交接/计划.json:问题清单[编号=3].验证方案.基线
+
+阻尼 ETS 用局部水平、受限趋势和月度季节项修正季节锚\cite{gardner1985trends}。因为训练序列只覆盖 3 个完整周期，所以趋势不能按预测步长无限外推，仅保留与本题预测直接相关的阻尼递推式% src:交接/实验记录.json:[问题=问题3/候选复杂度].现象
+\begin{equation}
+    \widehat z_{T+h}=\ell_T+\left(\sum_{j=1}^{h}\phi^j\right)b_T+q_{T+h-12k}.
+\end{equation} % src:求解/问题3/结果/组合权重与灵敏度.json:主设定.入选模型参数.阻尼ETS
+其中，$\ell_T,b_T,q_t$ 分别为训练终点的水平、趋势与月度季节状态，$k$ 使季节下标落入最近的已估计周期。入选配置取 $\phi=0.98$，使远期趋势增量逐渐收敛。% src:求解/问题3/结果/组合权重与灵敏度.json:主设定.入选模型参数.阻尼ETS.阻尼系数
+
+谐波岭回归用少量正余弦项表达平滑季节形状，并用岭惩罚压住短样本中的系数摆动：
+\begin{equation}
+    z_t=\beta_0+\beta_1u_t+
+    \sum_{k=1}^{K}\left[a_k\sin\left(\frac{2\pi kt}{12}\right)
+    +c_k\cos\left(\frac{2\pi kt}{12}\right)\right]+e_t,
+    \qquad u_t=\frac{t-(n-1)/2}{n-1},
+\end{equation}
+其中，$u_t$ 为训练窗内的缩放时间，$K$ 为谐波阶数，$a_k,c_k$ 描述季节波形。参数由
+\begin{equation}
+    \widehat\theta=\arg\min_{\theta}
+    \left\{\sum_t(z_t-x_t^{\mathsf T}\theta)^2
+    +\lambda\sum_{j\ne 0}\theta_j^2\right\}
+\end{equation}
+求得，其中截距不受惩罚；岭惩罚对短样本中的共线系数作稳定收缩\cite{hoerl1970ridge}。滚动回测选出 $K=2$、$\lambda=1.0$，即只用平滑低频季节项修正同月锚。% src:求解/问题3/结果/组合权重与灵敏度.json:主设定.入选模型参数.谐波岭回归
+
+低阶 SARIMA 只补充局部与季节相关信息\cite{hyndman2021forecasting}。我们最初考虑自动定阶和更大的参数网格，但 36 个训练点还要在 24 至 35 个月的短窗口内重复拟合，选择偏差与计算量都会被放大，因此只比较 4 个低阶结构；其中一个候选在训练截止 2024 年 2 月时产生非有限预测，脚本将该候选整项判为无效，没有用替代值掩盖失败。% src:交接/实验记录.json:[问题=问题3/候选复杂度].尝试,现象,决定 % src:求解/问题3/结果/滚动回测.json:拟合失败记录[0]
+
+\subsection{滚动回测与多步调参}
+
+参数选择只发生在训练期内部，采用滚动起点评价以保持预测时序\cite{hyndman2021forecasting}。最小训练窗取 24 个月，让首个起点至少看见两个完整季节周期；起点从 $o=24$ 滚动至 $o=35$，每次只使用 $y_1,\ldots,y_o$，一次预测其后最多 12 个月，共形成 12 个起点和 78 条预测记录。% src:求解/问题3/结果/滚动回测.json:滚动设计
+
+为了不让记录较多的短步预测淹没长步表现，候选 $j$ 在步长 $h$、指标 $m$ 上先相对季节朴素标准化，再对重点步长等权：
+\begin{equation}
+    r_{jhm}=\frac{L_{jhm}}{L_{SN,hm}},\qquad
+    Score_j=\frac{1}{4}\sum_{h\in\{1,3,6,12\}}
+    \frac{1}{3}\sum_{m\in\{MSE,MAE,MAPE\}}r_{jhm}.
+\end{equation} % src:求解/问题3/结果/滚动回测.json:滚动设计.重点步长,各模型族入选配置.四步长等权相对评分
+其中，$L_{jhm}$ 是模型 $j$ 的对应损失，$r_{jhm}$ 消除指标量纲，$Score_j$ 同等看待近、中、远期。第 12 步只有 1 条回测记录，所以它用于约束方向，不单独决定模型。% src:求解/问题3/结果/滚动回测.json:各模型族入选配置[模型族=季节朴素].重点步长指标[步长=12].样本数
+
+各模型族先按该评分锁定一项配置，随后才学习组合权重。训练期全步长误差列于表\ref{tab:q3_backtest_metrics}，组合在 78 条记录上的 MAE 为 10078.790、MAPE 为 17.485\%，均低于单个候选。% src:求解/问题3/结果/滚动回测.json:组合模型回测.全步长指标
+
+\begin{longtable}{>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}}
+    \caption{训练期滚动回测的全步长误差}\label{tab:q3_backtest_metrics}\\
+    \toprule
+    模型 & RMSE & MAE & MAPE（\%）\\
+    \midrule
+    季节朴素 & 16615.115 & 13873.441 & 25.049\\ % src:求解/问题3/结果/滚动回测.json:各模型族入选配置[模型族=季节朴素].全步长汇总指标
+    阻尼ETS & 14380.020 & 11954.674 & 21.023\\ % src:求解/问题3/结果/滚动回测.json:各模型族入选配置[模型族=阻尼ETS].全步长汇总指标
+    谐波岭回归 & 21875.662 & 15168.566 & 24.290\\ % src:求解/问题3/结果/滚动回测.json:各模型族入选配置[模型族=谐波岭回归].全步长汇总指标
+    低阶SARIMA & 16181.119 & 13375.235 & 23.921\\ % src:求解/问题3/结果/滚动回测.json:各模型族入选配置[模型族=低阶SARIMA].全步长汇总指标
+    受约束组合 & 12017.888 & 10078.790 & 17.485\\ % src:求解/问题3/结果/滚动回测.json:组合模型回测.全步长指标
+    \bottomrule
+\end{longtable}
+
+\subsection{季节锚定组合与经验区间}
+
+组合在原尺度直接最小化滚动预测误差。设第 $i$ 条回测任务上模型 $j$ 的预测为 $p_{ij}$，复杂度系数为 $c_j$，则权重由
+\begin{equation}
+\begin{aligned}
+    \min_{\boldsymbol w}\quad &
+    \frac{1}{N\operatorname{Var}(y)}
+    \sum_{i=1}^{N}\left(y_i-\sum_jw_jp_{ij}\right)^2
+    +\eta\sum_jc_jw_j^2,\\
+    \text{s.t.}\quad & w_j\geq 0,\qquad \sum_jw_j=1,
+    \qquad w_{SN}\geq 0.25,
+\end{aligned}
+\end{equation} % src:求解/问题3/结果/组合权重与灵敏度.json:指标含义,主设定
+其中，$N=78$，第一项用实际值方差消除销售额量纲；$c_j$ 随候选结构复杂度递增，使复杂模型承担更高权重代价；主设定取 $\eta=0.02$。% src:求解/问题3/结果/滚动回测.json:滚动设计.总预测记录数 % src:求解/问题3/结果/组合权重与灵敏度.json:指标含义.复杂度惩罚,主设定.复杂度惩罚强度
+非负且和为一保证结果仍是可解释的加权平均，$w_{SN}$ 的下限把季节锚变成约束而不是事后描述。因为本题只有 3 个完整训练周期，牺牲少量样本内最优性来限制复杂模型权重，更符合部署时对稳定性的要求。% src:交接/实验记录.json:[问题=问题3/候选复杂度].现象
+
+表\ref{tab:q3_weights}显示，权重集中在阻尼 ETS 与季节朴素，谐波岭补充平滑季节形状，SARIMA 的边际增益不足而被压至近零。
+
+\begin{longtable}{>{\centering\arraybackslash}p{0.18\textwidth}>{\centering\arraybackslash}p{0.16\textwidth}>{\centering\arraybackslash}p{0.25\textwidth}>{\centering\arraybackslash}p{0.29\textwidth}}
+    \caption{主组合权重、锁定参数与模型职责}\label{tab:q3_weights}\\
+    \toprule
+    模型 & 权重 & 锁定参数 & 组合职责\\
+    \midrule
+    季节朴素 & 0.25000 & 去年同月 & 稳定季节锚\\ % src:求解/问题3/结果/组合权重与灵敏度.json:主设定.权重.季节朴素
+    阻尼ETS & 0.49326 & $\phi=0.98$ & 水平与阻尼趋势\\ % src:求解/问题3/结果/组合权重与灵敏度.json:主设定.权重.阻尼ETS,主设定.入选模型参数.阻尼ETS
+    谐波岭回归 & 0.25674 & $K=2,\lambda=1.0$ & 平滑季节形状\\ % src:求解/问题3/结果/组合权重与灵敏度.json:主设定.权重.谐波岭回归,主设定.入选模型参数.谐波岭回归
+    低阶SARIMA & $\approx0$ & $(0,1,1)(1,0,0)_{12}$ & 相关结构候选\\ % src:求解/问题3/结果/组合权重与灵敏度.json:主设定.权重.低阶SARIMA,主设定.入选模型参数.低阶SARIMA
+    \bottomrule
+\end{longtable}
+
+权重灵敏度同时扰动季节锚下限与惩罚强度。预设的 9 种组合中，训练期权重虽有变化，独立复算的封存测试均保持主指标 3 项全胜、季度 4 季全胜；主设定没有因测试年表现而改选。% src:交接/实验记录.json:[问题=问题3/权重约束灵敏度复核].现象,决定
+
+区间校准使用滚动组合的绝对对数误差
+\begin{equation}
+    a_i=\left|\log(1+y_i)-\log(1+\widehat y_i)\right|.
+\end{equation}
+我们最初打算对 1 至 12 步分别估计经验分位数，但可用残差数由 12 条递减至 1 条，第 12 步无法稳定估计尾部。% src:交接/实验记录.json:[问题=问题3/多步区间校准].尝试,现象
+因此将步长合并为 $1$--$3$、$4$--$6$、$7$--$12$ 三组，校准样本数分别为 33、24、21。% src:求解/问题3/结果/2025逐月预测.json:区间校准参数
+若组 $g$ 的置信水平 $c$ 对应分位数为 $q_{g,c}$，则
+\begin{equation}
+    \mathcal I_{g,c}(\widehat y)=
+    \left[
+    \max\{0,\exp(\log(1+\widehat y)-q_{g,c})-1\},
+    \exp(\log(1+\widehat y)+q_{g,c})-1
+    \right].
+\end{equation}
+其中，乘性构造让高销售月份获得更宽的风险带，并把下界截断为非负；该区间来自短样本经验残差，不解释为严格参数置信区间。
+
+\subsection{封存测试、部署门槛与残差诊断}
+
+锁模后才用 MSE、MAE 与 MAPE 计算测试误差；测试月实际销售额均为正，故 MAPE 不需要零值替代。% src:求解/问题3/结果/2025评估指标.json:指标含义.MAPE
+
+部署门槛在查看测试结果前固定。令 $\mathcal M=\{MSE,MAE,MAPE\}$，季度集合为 $\mathcal Q$，部署指示量写为
+\begin{equation}
+\begin{aligned}
+    D_M&=\sum_{m\in\mathcal M}\mathbf 1(L_m^{C}<L_m^{SN}),
+    \qquad
+    D_Q=\sum_{q\in\mathcal Q}\mathbf 1(MAE_q^{C}<MAE_q^{SN}),\\
+    D&=\mathbf 1\{D_M\geq 2\}\mathbf 1\{D_Q\geq 3\},
+    \qquad
+    \widehat f_{deploy}=\begin{cases}
+    \widehat f_C,&D=1,\\
+    \widehat f_{SN},&D=0.
+    \end{cases}
+\end{aligned}
+\end{equation} % src:求解/问题3/结果/2025评估指标.json:指标含义.部署门槛
+其中，$D_M,D_Q$ 分别是主指标和季度 MAE 的胜出数，$C$ 表示锁定组合，$SN$ 表示季节朴素。该门槛只在组合与硬基线之间做一次部署验收，不允许依据 2025 年从全部候选中重新择优；否则唯一测试集会被二次用于调参。% src:交接/实验记录.json:[问题=问题3/测试回退规则].尝试,现象,决定
+
+表\ref{tab:q3_test_metrics}给出封存测试结果。组合的 MSE、MAE、MAPE 均小于季节朴素，季度 MAE 也在全部 4 个季度胜出，故 $D=1$，后续采用受约束组合。% src:求解/问题3/结果/2025评估指标.json:部署门槛判定
+
+\begin{longtable}{>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.22\textwidth}>{\centering\arraybackslash}p{0.20\textwidth}>{\centering\arraybackslash}p{0.24\textwidth}}
+    \caption{封存测试年主指标比较}\label{tab:q3_test_metrics}\\
+    \toprule
+    模型 & MSE & MAE & MAPE（\%）\\
+    \midrule
+    受约束组合 & 141848378.568 & 9583.563 & 16.367\\ % src:求解/问题3/结果/2025评估指标.json:各模型测试指标.锁定受约束组合
+    季节朴素 & 358424462.499 & 15444.178 & 24.865\\ % src:求解/问题3/结果/2025评估指标.json:各模型测试指标.季节朴素
+    \bottomrule
+\end{longtable}
+
+组合相对基线将 MSE、MAE、MAPE 分别降低 60.42\%、37.95\%、34.17\%，测试 RMSE 为 11910.012。% src:求解/问题3/结果/2025评估指标.json:各模型测试指标.锁定受约束组合,各模型测试指标.季节朴素
+图\ref{fig:q3_forecast}显示误差并非均匀分布：2025 年 8 月实际销售额为 62837.848，预测为 41057.274，低估 21780.574，是全年最大绝对误差。% src:求解/问题3/结果/2025逐月预测.json:逐月结果[月份=2025-08]
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../求解/问题3/图片/2025实际—预测及区间图.png}
+    \caption{封存测试年的实际值、组合预测与经验区间}
+    \label{fig:q3_forecast}
+\end{figure}
+
+残差诊断解释了点预测优势仍不能消除的风险。图\ref{fig:q3_residual}中，残差均值为 $+4846.247$，12 个月里有 8 个月被低估；四阶 Ljung--Box 检验\cite{ljung1978measure}的 $p$ 值为 0.2477，未检出显著剩余自相关，但样本量不足以支持强白噪声判断。% src:求解/问题3/结果/残差诊断.json:残差统计.均值_预测偏差,Ljung-Box_4阶 % src:交接/实验记录.json:[问题=问题3/复杂模型与区间表现].现象
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../求解/问题3/图片/预测残差诊断联合图.png}
+    \caption{封存测试残差的时序、自相关与分位诊断}
+    \label{fig:q3_residual}
+\end{figure}
+
+经验区间的实际覆盖率分别为 75.00\% 和 83.33\%，低于对应名义水平。% src:求解/问题3/结果/2025评估指标.json:区间测试表现
+这组结果支持把组合点预测用于部署，也要求把区间称为短样本风险带。部署通过后，模型可在 2022 年 1 月至 2025 年 12 月的 48 个月数据上重拟合状态与系数，但阻尼、谐波阶数、岭惩罚和组合权重保持锁定，再向下一章提供可加总的月度总量锚。% src:求解/问题3/结果/2026总量预测.json:接口说明.最终模型,训练数据范围

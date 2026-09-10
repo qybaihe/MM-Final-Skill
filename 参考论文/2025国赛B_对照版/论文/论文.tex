@@ -1,0 +1,83 @@
+\PassOptionsToPackage{quiet}{xeCJK}
+\PassOptionsToPackage{fontset=fandol}{ctex}
+\documentclass[withoutpreface,bwprint]{format}
+\usepackage{etoolbox}
+\usepackage{ctex}
+\BeforeBeginEnvironment{tabular}{\zihao{-5}}
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage{url}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{needspace}
+\usepackage{listings}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\renewcommand{\textbf}[1]{{\song\bfseries #1}}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\title{碳化硅与硅外延层的双角测厚与多光束检验}
+\geometry{top=16mm,bottom=16mm,left=22mm,right=22mm}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+\input{0.摘要.tex}
+\thispagestyle{empty}
+\newpage
+\setcounter{page}{1}
+
+\renewcommand{\baselinestretch}{1.00}
+\zihao{5}
+\setlength{\abovedisplayskip}{5pt plus 1pt minus 1pt}
+\setlength{\belowdisplayskip}{5pt plus 1pt minus 1pt}
+\setlength{\abovedisplayshortskip}{2pt}
+\setlength{\belowdisplayshortskip}{3pt}
+\setlength{\textfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\setlength{\floatsep}{5pt}
+\setlength{\emergencystretch}{2em}
+\setlength{\LTpre}{4pt}
+\setlength{\LTpost}{4pt}
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.06}
+\captionsetup{font=small,skip=3pt}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}{-1.8ex plus -.3ex minus -.2ex}{.8ex}{\centering\normalfont\large\bfseries\song}}
+\renewcommand\subsection{\@startsection{subsection}{2}{\z@}{-1.5ex plus -.2ex minus -.2ex}{.7ex}{\normalfont\normalsize\bfseries\song}}
+\renewcommand\subsubsection{\@startsection{subsubsection}{3}{\z@}{-1.3ex plus -.2ex minus -.2ex}{.6ex}{\normalfont\normalsize\bfseries\song}}
+\makeatother
+\input{1.问题重述与总体分析.tex}
+\input{1.1.问题重述.tex}
+\input{1.2.总体分析.tex}
+\input{2.数据审查与建模边界.tex}
+\input{2.1.附件体检.tex}
+\input{2.2.可用信息.tex}
+\input{3.模型假设与符号说明.tex}
+\input{3.1.模型假设.tex}
+\input{3.2.符号说明.tex}
+\input{4.模型的建立与求解.tex}
+\input{4.1.问题一.tex}
+\input{4.1.1.分析与准备.tex}
+\input{4.1.2.模型建立.tex}
+\input{4.1.3.求解与结果分析.tex}
+\input{4.2.问题二.tex}
+\input{4.2.1.分析与准备.tex}
+\input{4.2.2.模型建立.tex}
+\input{4.2.3.求解与结果分析.tex}
+\input{4.3.问题三.tex}
+\input{4.3.1.分析与准备.tex}
+\input{4.3.2.模型建立.tex}
+\input{4.3.3.求解与结果分析.tex}
+\input{5.模型检验.tex}
+\input{5.1.误差分析.tex}
+\input{5.2.灵敏度分析.tex}
+\input{6.模型评价与推广.tex}
+\input{6.1.优点.tex}
+\input{6.2.缺点.tex}
+\input{6.3.推广.tex}
+\input{7.参考文献.tex}
+\input{8.附录.tex}
+\input{8.1.问题一源码.tex}
+\input{8.2.问题二源码.tex}
+\input{8.3.问题三源码.tex}
+\input{8.4.补充材料.tex}
+\end{document}

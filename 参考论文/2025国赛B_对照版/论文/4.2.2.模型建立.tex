@@ -1,0 +1,69 @@
+\subsubsection{模型建立：共同厚度的色散变投影}
+
+同片双角共享厚度和折射变化，基线、幅值与固定相位则分别估计。先前考虑逐角求厚再平均，却会丢失同片约束，因而改用这项分工。
+% src:交接/实验记录.json:34.尝试;34.现象;34.决定
+
+令$d$为厚度（$\mu\mathrm{m}$），$\sigma$为波数（$\mathrm{cm}^{-1}$），$\theta\in\{10^\circ,15^\circ\}$为入射角。透明各向同性假设下，实折射率$n(\sigma)$与一次往返相位$\Phi_\theta$满足
+\begin{equation}
+n(\sigma)=n_0+c\left[\left(\frac{\sigma_0}{\sigma}\right)^2-1\right],\qquad
+\Phi_\theta=4\pi\,10^{-4}d\sigma\sqrt{n(\sigma)^2-\sin^2\theta}.
+\label{eq:q2-phase}
+\end{equation}
+其中$n_0$为参照波数$\sigma_0=2000\ \mathrm{cm}^{-1}$处的折射率，$c$为无量纲色散参数，$10^{-4}$将微米换为厘米；传播要求$n(\sigma)>\sin15^\circ$。缺少实测折射率，故用这两个参数描述折射变化。
+% src:交接/数据档案.json:总览.每块晶圆入射角度;未随附件提供的建模输入
+% src:交接/计划.json:问题清单.1.建模步骤.2
+% src:求解/问题2/结果/厚度结果.json:光学情景.传播约束
+
+取训练波数的中点$\bar\sigma$与半跨度$h$，令$x=(\sigma-\bar\sigma)/h$，以比例反射率$y_\theta$写出观测式
+\begin{equation}
+y_\theta=b_{\theta,0}+b_{\theta,1}x+b_{\theta,2}x^2
++ (a_{\theta,0}+a_{\theta,1}x)\cos(\Phi_\theta+\psi_\theta)+\varepsilon_\theta.
+\label{eq:q2-model}
+\end{equation}
+系数$b_{\theta,j}$和$a_{\theta,j}$分别描述基线与幅值，$\psi_\theta$为常相位，$\varepsilon_\theta$为残差。前节两角反射率并不相同，因此用各角低阶响应吸收慢变背景和包络差异；二次基线、一次幅值是限制干扰自由度的工作假设，其影响由改变阶数后的重新估计检查。幅值可变号而相位固定，避免自由相位吞掉条纹。
+% src:求解/问题2/结果/厚度结果.json:全量拟合参数.基线阶数;全量拟合参数.幅值阶数;灵敏度情景搜索完整性
+
+给定共享参数$\eta=(d,n_0,c)$和$\psi_\theta$，令$z_\theta=\cos(\Phi_\theta+\psi_\theta)$。变投影先解角度响应，再搜索物理参数，线性部分只含五列（表\ref{tab:05}）：
+\begin{equation}
+X_\theta=[1,x,x^2,z_\theta,xz_\theta],\qquad
+\widehat{\boldsymbol\beta}_\theta=\mathop{\arg\min}_{\boldsymbol\beta_\theta}
+\|\boldsymbol y_\theta-X_\theta\boldsymbol\beta_\theta\|_2^2.
+\label{eq:q2-projection}
+\end{equation}
+其中$X_\theta$在训练点逐行取值，$\boldsymbol y_\theta$为观测向量，系数向量$\boldsymbol\beta_\theta$按$X_\theta$列序排列。外层在表\ref{tab:05}约束内最小化两角等权损失
+\begin{equation}
+L(\eta)=\frac12\sum_{\theta\in\{10^\circ,15^\circ\}}
+\min_{0\leq\psi_\theta<\pi}
+\frac{\|\boldsymbol y_\theta-X_\theta\widehat{\boldsymbol\beta}_\theta\|_2^2}{N_\theta s_\theta^2}.
+\label{eq:q2-loss}
+\end{equation}
+训练点数记为$N_\theta$，$s_\theta$取训练二次趋势残差的四分位距，下限为$10^{-4}$，搜索中固定。用去趋势后的尺度归一化，使两角的幅值差异不直接决定损失权重；该尺度只在训练点计算并在搜索中固定。幅值变号可吸收$\pi$的相位平移，故常相位只搜索半周期。
+
+粗网格搜索以$96$个厚度点覆盖$0.5$--$40\ \mu\mathrm{m}$，再从多起点有界细化并全量重拟合。
+% src:交接/计划.json:问题清单.1.验证方案.灵敏度.3
+% src:求解/问题2/结果/基准交接.json:灵敏度情景.0.厚度网格点数
+
+参数搜索范围就是计算时允许各参数变化的上下限，并非材料测量给出的取值范围。参考折射率允许$n_0\in[1.2,6]$，色散参数允许$c\in[-1,1]$，并须满足前述传播约束；这些边界会排除范围外的组合，多起点用于比较范围内不同厚度与折射率组合。
+% src:交接/计划.json:问题清单.1.验证方案.灵敏度.3
+
+相位中厚度与折射因子相乘，折射率下降可由厚度增大补偿。
+
+全量拟合厚度为$10.80\ \mu\mathrm{m}$，参考折射率为$1.4930$。相位中的厚度与折射因子相乘，不同组合可以产生相近条纹，因而继续检查损失接近最小值的候选解。
+% src:求解/问题2/结果/厚度结果.json:同片最佳厚度_微米;同片最佳厚度的参考折射率
+
+连续切分、光学参数补偿以及基线和色散形式改变，共同形成$0.64$--$18.11\ \mu\mathrm{m}$的厚度重估范围（图\ref{fig:q2-thickness}）。令$D$为纳入范围的候选厚度集合，$I_{\mathrm{cond}}$为其最外端点构成的区间，则
+% src:求解/问题2/结果/厚度结果.json:条件区间_微米;条件区间组成
+\begin{equation}
+\begin{aligned}
+D&=D_2\cup D_5\cup D_{\mathrm{prof}}\cup D_{\mathrm{sens}},\\
+I_{\mathrm{cond}}&=[\min D,\max D].
+\end{aligned}
+\label{eq:q2-range}
+\end{equation}
+其中$D_2$、$D_5$分别收集两折、五折连续留段重新拟合的候选厚度；$D_{\mathrm{prof}}$固定全量拟合色散，逐点重估厚度与参考折射率网格上的各角响应，收集损失不超过剖面最小值$1.10$倍的厚度，称为近等损失剖面候选。
+% src:求解/问题2/结果/厚度结果.json:条件区间构造;条件区间组成.两折条件厚度_微米;条件区间组成.五折条件厚度_微米;条件区间组成.光学剖面厚度范围_微米
+
+$D_{\mathrm{sens}}$收集改变基线、幅值、色散或波段后重新估计的厚度，按“是否纳入厚度重估范围”筛选；满足传播约束和指定参数条件且被列为纳入的候选进入集合，人为改动指定参数的边界调整结果排除在外。这些候选对应各自的模型设置与参数约束，$I_{\mathrm{cond}}$汇集它们的最外端点，记录厚度随估计条件的变化。
+% src:求解/问题2/结果/厚度结果.json:条件区间构造;条件区间组成.灵敏度情景厚度_微米;灵敏度情景搜索完整性
+
+下一节据共同相位与逐角响应，报告两角预测、留段误差及反射率覆盖的缺口。

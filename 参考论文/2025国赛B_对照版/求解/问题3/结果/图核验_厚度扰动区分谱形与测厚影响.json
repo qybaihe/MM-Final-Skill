@@ -1,0 +1,19 @@
+{
+  "图名": "厚度扰动区分谱形与测厚影响",
+  "数据源摘要": {
+    "公平对照.json": "220d4cae82a27be619985682c87d1822f1d05bd431900ee65ed7ebbad0d8deaa",
+    "同口径对照.json": "6d88de34f903f19c6258af9d34367a95bbf2e5b0678dd32f3e983f7ef3712492",
+    "厚度结果.json": "e85aee8354710a07b38d8cb5da98178cb25c6f8dec74ddf28b0685facec46cce",
+    "灵敏度.json": "df553f08e0fe450aff7e6fbb76bf9b2e516a9aabf64dba3db5b6ce00024408dd",
+    "预测_硅_折0.csv": "3d23c0ed3bdd89eaf495406fbc1e665b5c9a95f737a2e6ef3bdbdb5d90c84c08",
+    "预测_硅_折1.csv": "55c64df52996ec21a9f1e52e3c02b9185c912a08949ca0093097bf72d169dc72",
+    "预测_硅_折2.csv": "b37164b63112d2bf427176364e96d5d12dde296ff3d8bee9d96876a32a60e1b5",
+    "预测_碳化硅_折0.csv": "b26cc161fbd610b2be13896acd1ea470677274267dbbf2d21d25d84e9abbbd67",
+    "预测_碳化硅_折1.csv": "5addf299b30050b3d8f06c5a151184f230062a7111028a3602e6fbe8e7d4368c",
+    "预测_碳化硅_折2.csv": "ccd2239df351798a11344c21ab3e8f6df7f633dabe88e41008fba3884eb55f75"
+  },
+  "记录数": 84,
+  "已重估": 80,
+  "不适用": 4,
+  "最大绝对变化_um": 3.925937945526023
+}

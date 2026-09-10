@@ -1,0 +1,99 @@
+\subsubsection{模型建立：衰减场求和与厚度偏差}
+
+首个返回场记为$B$，后续每轮返回都乘同一往返复倍率$u$，即共同的衰减与相位因子。按几何级数求和，分清高阶返回改变的是谱形还是厚度估计。
+
+\begingroup
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\setlength{\abovedisplayshortskip}{2pt}
+\setlength{\belowdisplayshortskip}{2pt}
+\setlength{\jot}{1pt}
+\setlength{\intextsep}{2pt}
+
+沿用界面振幅系数$r_{ij},t_{ij}$，$d,\sigma,\theta$分别为厚度（$\mu\mathrm{m}$）、波数（$\mathrm{cm}^{-1}$）和入射角。令$n_1$为外延层实折射率，纵向传播因子$q_1=\sqrt{n_1^2-\sin^2\theta}$，则
+\begin{equation}
+\begin{aligned}
+z&=\exp\!\left(-\lambda n_1/q_1+\mathrm{i}\Phi_\theta\right),\qquad
+\Phi_\theta=4\pi\,10^{-4}d\sigma q_1,\\
+B&=t_{01}t_{10}r_{12}z,\qquad u=r_{10}r_{12}z.
+\end{aligned}
+\label{eq:q3-return}
+\end{equation}
+其中$z,\Phi_\theta$为一次往返的传播因子与相位，$\lambda\geq0$为有效损耗；取正传播支，传播幅度不增长。保留$K$次返回的场记为$\mathcal E_K$，当$|u|<1$时
+\begin{equation}
+\begin{aligned}
+\mathcal E_K&=r_{01}+B\sum\nolimits_{k=0}^{K-1}u^k
+=r_{01}+B\frac{1-u^K}{1-u},\\
+E_\infty&=r_{01}+\frac{B}{1-u},\qquad E_2=\mathcal E_1=r_{01}+B,\\
+\left|E_\infty-\mathcal E_K\right|&\leq\frac{|B|\,|u|^K}{1-|u|}.
+\end{aligned}
+\label{eq:q3-series}
+\end{equation}
+这里$K$为正整数，$k$为返回阶次。尾项界给出截断误差，$u\to0$时完整往返场退回两束截断场；各次返回须先在复场上相加，再取模平方。
+
+多光束干涉首先要求光路能产生第三束出射光。光透入外延层、在衬底反射并穿出上表面，形成$B=t_{01}r_{12}zt_{10}$；留在层内的光又经上表面内反射和衬底反射，形成$Bu=t_{01}t_{10}r_{10}r_{12}^{2}z^{2}$。因此透入、透出及两个界面的内部反射通道均须非零。级数收敛约束这些返回场的总和，探测器记录的干涉还取决于光束间的关联。记直接场振幅$a_0=r_{01}$、第$m$次返回振幅$a_m=Bu^{m-1}$，$m\geq1$。对探测区域和时间作平均，实际强度中的交叉项为
+\begin{equation}
+\begin{aligned}
+I&=\sum_{m\geq0}|a_m|^2+
+2\operatorname{Re}\sum_{m<n}a_ma_n^*\gamma_{mn}\eta_{mn},\\
+J_{\mathrm{ho}}&=2\operatorname{Re}\sum_{\substack{m<n\\n\geq2}}
+a_ma_n^*\gamma_{mn}\eta_{mn}.
+\end{aligned}
+\label{eq:q3-cross-conditions}
+\end{equation}
+其中$\gamma_{mn}$为两返回场的归一化时间相干度，表示相位关联经时间平均后的保留比例；$\eta_{mn}$为探测区域内的归一化空间与偏振重叠积分。$J_{\mathrm{ho}}$专指至少含一束后续返回光的干涉交叉项，不含各束自身的强度。
+
+逐一断开光路即可检验必要性：$Bu=0$会消去全部后续返回，$\gamma_{mn}=0$会使该对光束的相位平均消失，$\eta_{mn}=0$会使探测面上的交叉积分消失。
+
+形成高阶干涉须存在$n\geq2$的场对满足$a_ma_n^*\gamma_{mn}\eta_{mn}\ne0$，且这些交叉项合计后仍随波数变化。非零返回、相位关联与空间偏振重叠由此分别落到可检查的因子上。
+
+相位关联和光束重叠可分别换成长度比较。令$\omega=2\pi c_0\sigma$，$c_0$为真空光速，$\phi_m$为第$m$束在同一观测面的相位，定义群时延差$\Delta\tau_{mn}=|\partial(\phi_m-\phi_n)/\partial\omega|$，等效往返光程差为$L_{mn}=c_0\Delta\tau_{mn}$。在单一相干包络、平行界面与有限宽光束的近似下，明显交叉项要求
+\begin{equation}
+L_{mn}\lesssim\ell_c,\qquad
+|m-n|\,2d_{\mathrm{cm}}\tan\theta_1\lesssim w_b,\qquad
+L_{mn}=\frac{|m-n|}{2\pi}\left|\frac{\partial\arg u}{\partial\sigma}\right|\quad(m,n\geq1).
+\label{eq:q3-coherence-overlap}
+\end{equation}
+这里$\ell_c$为有效相干长度，$\theta_1$为层内角，$w_b$为探测面对应的光束横向尺度，所有长度统一用厘米。末式由返回场每轮累积同一相位得到，已包含传播色散和界面相位；无色散、界面相位不变时，单次光程差退化为$2d_{\mathrm{cm}}q_1$。长度比较描述常见包络下的量级要求，严格条件仍是式\eqref{eq:q3-cross-conditions}中的关联与重叠积分非零。
+
+干涉形成后还要通过仪器响应。设$h$为归一化谱响应核，$\delta R_{\mathrm{ho}}$为$J_{\mathrm{ho}}$除以入射强度后的反射率贡献，比较时固定同一组光学参数；$\varepsilon_R$为噪声与背景分离误差尺度，则辨认高阶贡献要求
+\begin{equation}
+\|h*\delta R_{\mathrm{ho}}\|>\varepsilon_R,\qquad
+|C_j\widehat h(f_j)|\gtrsim\varepsilon_R,\quad
+f_j=\frac{j}{2\pi}\left|\frac{\partial\arg u}{\partial\sigma}\right|.
+\label{eq:q3-resolution}
+\end{equation}
+其中$C_j$、$f_j$是相隔$j$轮的返回场交叉项在局部的振幅和波数频率，$\widehat h$是仪器响应的傅里叶变换；$\arg u$同时保留传播及界面相位。若谱响应宽度为$\delta\sigma_{\mathrm{inst}}$，避免明显平均抵消通常要求$2\pi f_j\delta\sigma_{\mathrm{inst}}\lesssim1$，严格判断仍以卷积后的幅度为准。采样间距描述相邻观测点的距离；仪器谱响应与噪声尺度则需独立标定，附件未提供这两项资料。因而$|u|<1$回答级数能否求和，非零交叉项回答干涉能否形成，响应后超出噪声才回答实验能否辨认。
+
+曾尝试分别估计消光、界面损耗和偏振权重；因附件缺少对应标定，改用$\lambda$合并吸收与界面损失。该量描述总衰减，而非实测消光系数。
+% src:交接/实验记录.json:43.尝试;43.现象;43.决定
+
+同片双角共享$(d,n_{\rm ref},c,\Delta n,\lambda)$；$n_1$沿用式\eqref{eq:q2-phase}，参考折射率记为$n_{\rm ref}$，衬底折射率取$n_2=n_1+\Delta n$。主情景取偏振等权，各角背景最高二次、幅值最高一次：
+\begin{equation}
+\begin{aligned}
+P_\theta&=\tfrac12\left(|E_{\theta,s}|^2+|E_{\theta,p}|^2\right),\\
+R_\theta&=\beta_{\theta0}+\beta_{\theta1}x+\beta_{\theta2}x^2+
+\left[\gamma_{\theta0}\frac{1-x}{2}+\gamma_{\theta1}\frac{1+x}{2}\right]P_\theta+\varepsilon_\theta.
+\end{aligned}
+\label{eq:q3-observation}
+\end{equation}
+其中$x$按主拟合窗口中心与半宽归一化；$P_\theta,R_\theta$为理想与观测比例反射率，$s,p$为正交偏振，$\beta,\gamma,\varepsilon$依次为背景系数、有界非负幅值端点和残差。拟合时先从物理响应列扣去可被背景解释的分量，再约束标准化增益并施加收缩惩罚；阶数与惩罚由训练内比较选定，两模型共用所选设置，避免背景吞掉条纹。
+
+冻结折射率、损耗和界面系数，高阶返回只引入基本相位的整数倍，故
+\begin{equation}
+P_\theta(\Phi_\theta+2\pi)=P_\theta(\Phi_\theta),\qquad
+\Delta\sigma=\frac{10^4}{2dq_1}.
+\label{eq:q3-period}
+\end{equation}
+这里$\Delta\sigma$为同型条纹的基本波数周期。谱峰可以变尖而周期不变；色散、损耗或响应随波数变化会移动极值，误把整数倍频的谐波当成基频也会改变测厚所用的峰距。
+
+峰形变化对厚度的作用取决于它能否被厚度方向解释。令$\delta R=R_\infty-R_2$为两模型的谱差，$J_d=\partial R_2/\partial d$描述厚度微变引起的谱差。固定其余参数，作局部线性近似，两束解附近的厚度改变量$\delta d=d_\infty-d_2$满足
+\begin{equation}
+\langle J_d,J_d\delta d+\delta R\rangle=0
+\quad\Longrightarrow\quad
+\delta d\simeq-\frac{\langle J_d,\delta R\rangle}{\langle J_d,J_d\rangle}.
+\label{eq:q3-thickness-shift}
+\end{equation}
+内积按同一双角尺度加权；谱差与厚度方向正交时，一阶偏移为零。重估色散等参数时，先扣除两向量中可被其解释的分量；厚度与折射率的互相补偿会减弱厚度约束，因此谱差与厚度改变量分别评价。下一节分列硅逐角结果，再判碳化硅修正。
+
+\endgroup

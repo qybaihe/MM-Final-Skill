@@ -1,0 +1,59 @@
+\subsection{符号说明：波数相位与厚度量纲}
+\label{sec:thickness-quantities}
+
+波数、角度和厚度必须先各自归位，才能让同一条相位关系在三问之间不换口径。真空波长记为 $\lambda_{\mathrm{vac}}$，$\sigma=1/\lambda_{\mathrm{vac}}$ 为波数，单位为 $\mathrm{cm}^{-1}$；题面给出的 $10^\circ$、$15^\circ$ 是空气侧外部入射角，记为 $\theta$，层内传播角记为 $\theta_j$。外部角度只负责界面入射条件，层内相位由纵向因子 $q_j$ 承接，不能把 $10^\circ$ 或 $15^\circ$ 直接代入层内相位。
+% src:交接/数据档案.json:总览.每块晶圆入射角度
+% 依据:交接/建模笔记_问题1.md:2. 几何、波数和传播因子
+
+用 $j=0,1,2$ 标记空气、外延层和衬底，外延层几何厚度记为 $d$，相位计算取其厘米值 $d_{\mathrm{cm}}$。透明层内可写作 $q_j=N_j\cos\theta_j$，复折射率存在虚部时仍以根式定义的 $q_j$ 作为传播量。介质 $j$ 的复折射率写为 $N_j(\sigma)=n_j(\sigma)+i\kappa_j(\sigma)$，其中 $i$ 为虚数单位，于是
+\begin{equation}
+q_j(\sigma,\theta)=\sqrt{N_j(\sigma)^2-\sin^2\theta},\qquad
+z(\sigma,\theta;d)=\exp\!\left(4\pi i\,d_{\mathrm{cm}}\sigma q_1(\sigma,\theta)\right).
+\end{equation}
+式中 $q_j$ 表示沿厚度方向的传播，根号取虚部非负的根，即 $\operatorname{Im}q_j\ge0$，透明介质取非负实根，使传播幅度不增长；虚部为正时光在传播中衰减。$z$ 表示光在外延层中往返一次后的复传播因子。这样，外部角度和层内传播方向被明确分开。
+% 依据:交接/建模笔记_问题1.md:2. 几何、波数和传播因子
+
+角度和波数统一后，还要把一次返回与完整往返场分成两个符号。令 $r_{jk}$、$t_{jk}$ 分别表示从介质 $j$ 到介质 $k$ 的复反射、透射系数；以下对每种偏振分别定义，省略偏振下标，入射场振幅归一为1。将表面直接反射加首个返回记为 $E_2$，将表面反射加全部往返记为 $E_\infty$，则
+\begin{equation}
+E_2=r_{01}+t_{01}t_{10}r_{12}z,\qquad
+E_\infty=r_{01}+\frac{t_{01}t_{10}r_{12}z}{1-r_{10}r_{12}z}.
+\end{equation}
+其中 $E_2$ 只保留表面直接反射和首个返回，$E_\infty$ 才把后续返回写成几何级数；$d$ 始终表示外延层几何厚度，同片双角共享其值，硅与碳化硅分别估计。同一比较内两种场共用 $z$；问题三以实折射率和有效损耗参数化其相位与幅度。表~\ref{tab:03} 汇总符号含义、单位及双角共享或各角独有的用法。
+
+\begingroup
+\zihao{5}
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\centering\arraybackslash}p{0.22\textwidth} >{\centering\arraybackslash}p{0.34\textwidth} >{\centering\arraybackslash}p{0.36\textwidth}}
+\caption{符号含义、单位与角度用法}\label{tab:03}\\
+\hline
+符号 & 短含义 & 单位与使用属性\\
+\hline
+\endfirsthead
+\hline
+符号 & 短含义 & 单位与使用属性\\
+\hline
+\endhead
+$j,\lambda_{\mathrm{vac}},\sigma$ & 层编号、真空波长、波数 & 无量纲、$\mathrm{cm}$、$\mathrm{cm}^{-1}$\\
+$\theta,\theta_j$ & 外角、层内角 & 度；外角给定、内角求得\\
+$N_j=n_j+i\kappa_j$ & 复折射率 & 无量纲；随材料、波数变化\\
+$q_j,z$ & 纵向因子、往返因子 & 无量纲；随波数、外角变化\\
+$\lambda$ & 有效往返损耗 & 无量纲；同片双角共享\\
+$d_{\mathrm{cm}},d_{\mu\mathrm{m}}$ & 几何厚度 & 厘米、微米；同片共享\\
+$r_{jk},t_{jk}$ & 复反射、透射系数 & 无量纲；随角度、偏振变化\\
+$E_2,E_\infty$ & 两束场、完整往返场 & 无量纲；归一化复振幅\\
+$\rho_{\%},R$ & 百分数反射率、反射率比例 & $R=\rho_{\%}/100$\\
+\hline
+\end{longtable}
+\endgroup
+
+表中 $N_j$ 的实部决定相位、虚部决定衰减；$q_j$ 描述纵向传播，$z$ 描述在外延层中的一次往返。$E_2$ 叠加表面反射与首个返回，$E_\infty$ 叠加表面反射与全部返回；$\lambda$ 用于问题三的有效往返损耗。
+
+几何厚度$d$描述外延层上下界面的实际间距；周期等效量$T$则是把有限波段内拟合的条纹间距折算成的长度。令有效周期$\Delta\sigma$以$\mathrm{cm}^{-1}$计，$T$以$\mu\mathrm{m}$计，则
+\begin{equation}
+T=\frac{10^4}{2\Delta\sigma}.
+\end{equation}
+其中$\Delta\sigma$是整段光谱的周期统计量，不是每一对相邻条纹的局部间距。色散与界面相位的贡献均包含在条纹变化中；在透明近似下，只有这些变化足够小且相位在窗口内近似均匀变化时，$T$才近似为$d_{\mu\mathrm{m}}q_1$。这一区分使周期读数与外延层几何厚度各有明确对象，局部关系见式\eqref{eq:period-equivalent}。
+
+厚度由厘米换为微米时，$d_{\mu\mathrm{m}}=10^4d_{\mathrm{cm}}$。
+% src:求解/问题1/结果/模型验证.json:单位换算.输入厚度_微米;单位换算.厚度_厘米;单位换算.回换厚度_微米
+这些符号固定了外角、层内传播与量纲，问题一据此推导表面反射和首个返回的合场强度。
