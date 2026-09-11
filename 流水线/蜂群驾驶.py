@@ -425,11 +425,16 @@ def 基建清单():
         对.append(("运行时/HMML.md", HMML路径))
     for t in 模板参考目录.glob("*.tex"):
         对.append((f"运行时/模板参考/{t.name}", t))
-    for p in sorted(输入目录.iterdir()):
-        if p.suffix.lower() == ".pdf":
+    # R54（2026 国赛 A 题）：附件可以带子目录（如 附件3/result1.xlsx 结果填写模板），按相对路径播进 数据/；
+    # 题目目录除 PDF 外还认 .txt/.md（如 论文格式规范2026.txt，读题官据此写契约）。仍不递归 .pdf 以外的题目文件夹。
+    for p in sorted(输入目录.rglob("*")):
+        if not p.is_file() or p.name.startswith("."):
+            continue
+        rel = p.relative_to(输入目录).as_posix()
+        if p.suffix.lower() in (".pdf", ".txt", ".md") and p.parent == 输入目录:
             对.append((f"题目/{p.name}", p))
         elif p.suffix.lower() in (".xlsx", ".csv", ".docx"):
-            对.append((f"数据/{p.name}", p))
+            对.append((f"数据/{rel}", p))
     return 对
 
 
