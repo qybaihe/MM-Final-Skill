@@ -32,12 +32,16 @@ LOG_OVERRIDE="${LOG_OVERRIDE:-}"
 
 驱动pid() { [ -f "$PIDF" ] && tr -d ' \n' < "$PIDF"; }
 # macOS 的 ps 会把命令行里的非 ASCII 字节转义成 M-x 序列，grep 中文永远不中；进程匹配一律走 pgrep -f（按原始字节匹配）。
-是驱动() { [ -n "${1:-}" ] && pgrep -f "蜂群驾驶.py" 2>/dev/null | grep -qx "$1"; }
+# R62：驱动 = 「某个 python 解释器 + 第一个参数是 …蜂群驾驶.py」，锚定 argv 前缀。旧写法 pgrep -f "蜂群驾驶.py" 是子串匹配，
+# 操盘手自己命令行里提到这个文件名的 shell（如 py_compile / grep 流水线/蜂群驾驶.py）都会被数成驱动
+# （2026-09-11 A 题 22:51 切换.sh 停净判定「驱动=1」实为滞留工具 shell → 没停净、不续跑）。
+DRV_RE='^[^ ]*[Pp]ython[^ ]* [^ ]*蜂群驾驶\.py( |$)'
+是驱动() { [ -n "${1:-}" ] && pgrep -f "$DRV_RE" 2>/dev/null | grep -qx "$1"; }
 驱动活着() { local p; p="$(驱动pid)"; [ -n "$p" ] && kill -0 "$p" 2>/dev/null && 是驱动 "$p"; }
-所有驱动() { pgrep -f "蜂群驾驶.py" 2>/dev/null || true; }
+所有驱动() { pgrep -f "$DRV_RE" 2>/dev/null || true; }
 # 同父目录的驱动（状态/台账/镜像共用父目录，两个驱动同父目录 = 双驱动事故）；按父目录名匹配，相对/绝对路径都认
-父目录驱动() { pgrep -f "蜂群驾驶.py.*$(basename "$PARENT")/" 2>/dev/null || true; }
-驱动命令行() { pgrep -fl "蜂群驾驶.py" 2>/dev/null | grep "^${1:-} " | cut -c1-160; }
+父目录驱动() { pgrep -f "^[^ ]*[Pp]ython[^ ]* [^ ]*蜂群驾驶\.py .*$(basename "$PARENT")/" 2>/dev/null || true; }
+驱动命令行() { pgrep -fl "$DRV_RE" 2>/dev/null | grep "^${1:-} " | cut -c1-160; }
 # 一条腿 = 一个 codex 包装进程（node 包装或原生二进制）；perl with_timeout 那行虽含同样参数但以 perl 开头，不算
 codex腿数() { ps -eo command | grep -E '^(node |/[^ ]*/codex |codex )' | grep -c ' exec ' | tr -d ' '; }
 xelatex数() { pgrep -x xelatex 2>/dev/null | wc -l | tr -d ' '; }

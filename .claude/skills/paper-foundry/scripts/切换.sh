@@ -4,7 +4,8 @@
 # bash 按字节偏移读脚本，正在运行的脚本被原地改写会跑飞（双驱动事故的根因），复制后源文件随便改。
 if [ -z "${_SWITCH_COPY:-}" ]; then
   _t="$(mktemp -d "${TMPDIR:-/tmp}/qiehuan.XXXXXX")"; _d="$(cd "$(dirname "$0")" && pwd -P)"
-  for f in 切换.sh 公共.sh 停跑.sh 启动.sh 验证.sh; do cp "$_d/$f" "$_t/$f"; done
+  # R57：验证.sh 会调同目录 打包.sh --核对（发布版与核心一致性），漏拷它就在停净之后「验证失败，不续跑」（2026-09-11 12:59 A 题实战）。
+  for f in 切换.sh 公共.sh 停跑.sh 启动.sh 验证.sh 打包.sh; do cp "$_d/$f" "$_t/$f"; done
   _SWITCH_COPY=1 _SWITCH_SRC="$_d" exec bash "$_t/切换.sh" "$@"
 fi
 export SHUMO_PROJ="${SHUMO_PROJ:-$(cd "$_SWITCH_SRC/../../../.." && pwd -P)}"

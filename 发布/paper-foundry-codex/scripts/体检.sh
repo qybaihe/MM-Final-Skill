@@ -46,7 +46,23 @@ if [ -x "$PYV" ]; then
   if "$PYV" -c "import numpy, pandas, matplotlib, scipy, sklearn" 2>/dev/null; then ok "venv 科学栈齐（$("$PYV" -V 2>&1)）"; else bad "venv 缺包（环境就绪.sh 补装）"; fi
 else bad "缺 流水线/运行时/venv（环境就绪.sh）"; fi
 if python3 -c "import numpy" 2>/dev/null; then ok "shell 里的 python3 也有 numpy（$(python3 -V 2>&1)）"
-else warn "shell 里的 python3（$(python3 -V 2>&1)）没有 numpy：正常——腿内只用裸 python3（驱动 PATH 首位是 venv），别写绝对路径解释器（P8）"; fi
+else warn "shell 里的 python3（$(python3 -V 2>&1)）没有 numpy：腿只写脚本、驱动用 venv 跑，脚本里别写绝对路径解释器（P8）"; fi
+# R55：codex 腿用 /bin/bash -lc 跑命令，macOS 登录 shell 的 path_helper 会把 homebrew 排到 venv 前面；腿内 python3 必须仍能导入科学栈
+# （本地蜂巢 给腿环境加了 PYTHONPATH）。这里用 LocalHive 的真实腿环境 + 登录 shell 探一次，导入不了就是硬失败（2026-09-11 A 题曾因此整炉锁成纯标准库路线）。
+PROBE=$(cd "$PROJ" && python3 - <<'PY' 2>&1
+import pathlib, subprocess, sys, tempfile
+sys.path.insert(0, "流水线")
+from 本地蜂巢 import LocalHive
+h = LocalHive(root=pathlib.Path(tempfile.mkdtemp(prefix="体检探针.")))
+r = subprocess.run(["/bin/bash", "-lc", 'python3 -c "import sys, numpy, openpyxl, matplotlib, scipy; print(sys.executable, numpy.__version__, openpyxl.__version__)"'],
+                   env=h.env, capture_output=True, text=True, timeout=120)
+print(("OK " + r.stdout.strip()) if r.returncode == 0 else ("FAIL " + (r.stderr.strip().splitlines() or ["?"])[-1]))
+PY
+)
+case "$PROBE" in
+  OK*) ok "腿内登录 shell 探针（bash -lc + LocalHive.env）可导入 numpy/openpyxl/matplotlib/scipy：${PROBE#OK }" ;;
+  *) bad "腿内登录 shell 探针失败（R55：腿会把科学栈判成不可用）：${PROBE}" ;;
+esac
 
 echo "== 字体 =="
 if ls "$HOME/Library/Fonts"/FandolHei* >/dev/null 2>&1 || ls "$(brew --prefix texlive 2>/dev/null)/share/texmf-dist/fonts/opentype/public/fandol"/FandolHei* >/dev/null 2>&1; then ok "Fandol 字体"; else bad "缺 Fandol 字体（编译与绘图中文的命根子；环境就绪.sh）"; fi

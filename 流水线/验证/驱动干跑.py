@@ -45,7 +45,9 @@ if 引擎场景:
 _已中断 = {"flag": False}
 
 假图 = [f"求解/问题{q}/图片/图{q}_{i}.png" for q in (1, 2, 3) for i in (1, 2, 3, 4, 5, 6)]
-假页 = [f"论文/页/p{i:02d}.png" for i in range(1, 20)]
+假页 = [f"论文/页/p{i:02d}.png" for i in range(1, 41 if 模式 == "全链" else 20)]   # 全链：40 页 → 美化/终审各 5 腿，超过并发上限 4（R65 分块）
+图片腿并发 = {"在跑": 0, "峰值": {}}
+收割列举 = {"s": ""}   # R66：S6 出版收割的列举脚本原文（断言含 *.xlsx）   # R65：美化/终审看图腿同时在跑的峰值（leg_img 计数，等腿 轮询归零）
 
 
 def _mock_json(rel):
@@ -102,8 +104,11 @@ def _mock_json(rel):
             if 红队读数["n"] == 1:      # 首轮：缺冻结输入包，全 null 不齐 → 仲裁 → 建模返工 → 复核轮
                 return {"问题": 1, "复算方式": "独立实现", "复算指标": {"厚度": None}, "口径说明": {"厚度": "缺冻结输入包"},
                         "结论": "不齐", "分歧明细": [{"指标": "厚度", "建模值": 10.0, "复算值": None, "相对差": 1.0}]}
+        # R56：P1 之后红队会把独立口径的差异也写进 分歧明细（类型=口径）只作交叉印证；这里故意放一条 4.8% 的口径行，
+        # 驱动必须仍按 结论=对齐 放行、不派仲裁腿（2026-09-11 A 题问1 真跑：正是这样一条口径行派出了一次伪仲裁）。
         return {"问题": 1, "复算方式": "独立实现", "复算指标": {"厚度": 10.0}, "口径说明": {"厚度": "μm"},
-                "结论": "对齐", "分歧明细": []}
+                "结论": "对齐", "口径对照": {"厚度": {"声明口径": "点值", "我的口径": "点值", "同口径": True}},
+                "分歧明细": [{"指标": "厚度", "建模值": 10.0, "复算值": 10.48, "相对差": 0.048, "类型": "口径", "说明": "采样带均值 vs 点值"}]}
     if "仲裁_问题" in rel:
         if 模式 == "红队不齐":
             return {"逐项": [{"指标": "厚度", "裁定": "建模错", "理由": "合成输入未冻结导出", "应改方": "建模"}], "总裁定": "建模需返工"}
@@ -257,6 +262,7 @@ class 假Hive:
         m = re.search(r"c=0; for f in (.+?); do", s)
         if m and "kill -0" not in s:
             n = len(m.group(1).split())
+            图片腿并发["在跑"] = 0                  # R65：等腿 轮询到 done → 这批看图腿视为跑完
             if 死亡演练["开启"] and not 死亡演练["已注入"]:
                 return {"exit": 0, "stdout": "0"}      # 第一轮：装作全都没完成
             return {"exit": 0, "stdout": str(n)}
@@ -295,6 +301,7 @@ class 假Hive:
         if "find 求解 -type f" in s or "find " in s and "-type f" in s:
             return {"exit": 0, "stdout": "\n".join(假图[:5])}
         if "ls 论文/*.tex" in s:
+            收割列举["s"] = s                     # R66
             return {"exit": 0, "stdout": "论文/论文.tex\n论文/0.摘要.tex"}
         if "bin/门检.py" in s:
             return {"exit": 0, "stdout": "门检完成"}
@@ -354,6 +361,10 @@ class 假Hive:
 
     def leg_img(self, role_file, task_text, log_name, images, timeout=900, reasoning=True, **kw):
         腿记录.append(("图片腿", log_name))
+        if re.match(r"(美\d+_|终审_)\d+$", log_name):        # R65：整份铺开的看图腿，量同时在跑峰值
+            图片腿并发["在跑"] += 1
+            k = "美化" if log_name.startswith("美") else "终审"
+            图片腿并发["峰值"][k] = max(图片腿并发["峰值"].get(k, 0), 图片腿并发["在跑"])
         效力记录[log_name] = kw.get("effort")
         任务文本[log_name] = task_text
         return {"exit": 0, "stdout": f"{log_name}启动"}
@@ -428,6 +439,16 @@ with tempfile.TemporaryDirectory() as td:
         assert "终审整改" in 任务文本 and "审稿/终审_1.json" in 任务文本["终审整改"] and "共 1 条必改" in 任务文本["终审整改"], \
             f"R53 终审整改任务应传文件与条数而非截断 JSON：{任务文本.get('终审整改', '')[:200]}"
         print("[PASS] R53 终审整改：任务传 审稿/终审_N.json 与条数，不按字符截断")
+        上限 = int(os.environ.get("HIVE_MAX_CONCURRENT", "4"))
+        assert len(假页) > 8 * 上限 and 图片腿并发["峰值"].get("美化", 0) <= 上限 and 图片腿并发["峰值"].get("终审", 0) <= 上限, \
+            f"R65 看图腿应按并发上限 {上限} 分块起（{len(假页)} 页；美化/终审同时在跑峰值 {图片腿并发['峰值']}）"
+        print(f"[PASS] R65 看图腿分块：{len(假页)} 页 → 美化/终审同时在跑峰值 {图片腿并发['峰值']} ≤ 并发上限 {上限}")
+        assert "'*.xlsx'" in 收割列举["s"], f"R66 出版收割的列举应包含 result*.xlsx（契约交付物）：{收割列举['s'][:200]}"
+        print("[PASS] R66 出版收割列举含 *.xlsx（结果模板交付物随成品一起收割）")
+        伪仲裁 = [n for _, n in 腿 if n.startswith("仲裁_问题")]
+        assert not 伪仲裁 and "口径差异 1 条只作交叉印证" in 日志, \
+            f"R56 红队 结论=对齐 且只有 类型=口径 的超容差行时不应派仲裁：仲裁腿={伪仲裁}，日志含口径提示={'口径差异 1 条只作交叉印证' in 日志}"
+        print("[PASS] R56 红队报告的 类型=口径 行不触发仲裁（结论=对齐 直接放行并记数）")
         if 引擎场景:
             状态引擎 = json.loads((pathlib.Path(假根["p"]).parent / "状态.json").read_text(encoding="utf-8")).get("引擎")
             assert 状态引擎 == "claude", f"--引擎=claude 未记进 状态.json：{状态引擎}"

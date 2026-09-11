@@ -17,6 +17,7 @@ import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 import time
 import traceback
@@ -171,6 +172,28 @@ def budget_ok():
 并发上限 = int(os.environ.get("HIVE_MAX_CONCURRENT", "4"))   # 同时在跑的 codex 腿数；命中 429 自动降 1（下限 2）
 
 
+def 回收超时腿(name):
+    """R60：波次到时限、done 未写而进程还活着 → 判失败（重派或最终失败）之前先整组回收。
+    否则旧副本与重试副本并行双写同一批交接文件（2026-09-11 A 题：解读_回炉_轮1_问4 两副本并行 40 min，
+    交接/结果声明_问题4.json 在红队复算窗口内被改写 → 红队不齐 → 仲裁；图修1 两副本各写一次 rc=0）。
+    设计本意是腿上限（LEG_TIMEOUT=波次-60）先于波次超时把腿杀掉，这里是那条不变量失守时的兜底：
+    先收集 role.sh（session leader，pid==pgid）全部后代的进程组（perl 子进程 = codex 组长，另起了会话），
+    对每个组 TERM → 最多等 10 s → KILL；不依赖 perl 转发。pid 文件缺失或进程已死则什么都不做。"""
+    脚本 = (f"p=$(cat 日志/{name}.pid 2>/dev/null); [ -n \"$p\" ] || exit 0; kill -0 $p 2>/dev/null || exit 0; "
+            "[ \"$(ps -o stat= -p $p 2>/dev/null | head -c1)\" != \"Z\" ] || exit 0; "      # 僵尸（已退出、驱动尚未收割）不算活
+            "G=\"$p\"; Q=\"$p\"; while [ -n \"$Q\" ]; do N=\"\"; for q in $Q; do for c in $(pgrep -P $q 2>/dev/null); do "
+            "N=\"$N $c\"; G=\"$G $(ps -o pgid= -p $c 2>/dev/null | tr -d ' ')\"; done; done; Q=\"$N\"; done; "
+            "G=$(echo $G | tr ' ' '\\n' | sort -u | tr '\\n' ' '); "
+            "for g in $G; do kill -TERM -- -$g 2>/dev/null; done; "
+            "for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 $p 2>/dev/null || break; sleep 1; done; "
+            "for g in $G; do kill -KILL -- -$g 2>/dev/null; done; sleep 1; "
+            "echo \"回收 pgid:$G 仍活:$(for g in $G; do kill -0 -- -$g 2>/dev/null && printf ' %s' $g; done)\"")
+    d = h.exec(脚本, quiet=True, timeout_s=40)
+    出 = (d.get("stdout") or "").strip()
+    if 出:
+        log(f"!! 腿 {name} 到时限仍在跑 → 整组回收（R60）：{出}")
+
+
 def wave(legs, timeout=1300, poll=30, retry=True):
     """异步跑一组腿到 done。legs=[(role,task,name)]。返回 {name: done首行}。失败重试一次。
 
@@ -278,6 +301,8 @@ def wave(legs, timeout=1300, poll=30, retry=True):
                     log(f"!! 腿 {name} 超过腿上限 {腿上限}s 被杀（rc=142）——任务过重或需放宽该波次 timeout")
                 elif not first:
                     log(f"!! 腿 {name} 到时限仍无 done（波次 {timeout}s）")
+                if not first:
+                    回收超时腿(name)          # R60：重派/判最终失败前先回收还活着的旧副本，杜绝双写
                 if retry and attempt == 1 and budget_ok():
                     nxt.append((role, task, name))
                     log(f"腿失败待重试: {name} ({first[:40]})")
@@ -511,6 +536,23 @@ def 等腿(名们, timeout=1100, poll=30):
         except Exception:
             pass
     return False
+
+
+def 图片腿群(规格们, 单腿超时=800, 等待=1000):
+    """R65：图片腿() 直接 spawn、不走 wave() 的并发闸。美化/终审按 8 页一腿整份铺开：对照跑 66 页只有 9 腿，
+    2026 A 题 327 页（附录源码 ≈305 页）→ 41 腿同时起，10 倍于实测稳定并发 4（6 并发曾整晚 429）。
+    这里按 并发上限 分块：起一块 → 等腿(块) → 下一块；块内单腿仍由 图片腿.sh 的 with_timeout 兜底。
+    规格 = (名, 角色文件, 任务文本, 图们, reasoning)。返回启动过的腿名（顺序与规格一致）。"""
+    名们 = []
+    步 = max(1, int(并发上限))
+    for i in range(0, len(规格们), 步):
+        块 = 规格们[i:i + 步]
+        for 名, 角色, 任务, 图们, 推理 in 块:
+            名们.append(图片腿(名, 角色, 任务, 图们, timeout=单腿超时, reasoning=推理))
+        if len(规格们) > 步:
+            log(f"图片腿群 {len(名们)}/{len(规格们)}：起 {[x[0] for x in 块]}（并发上限 {步}，R65 分块）")
+        等腿([x[0] for x in 块], timeout=等待)
+    return 名们
 
 
 def 门检(门名, timeout_s=200):
@@ -1056,6 +1098,34 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
                       f"结果目录 求解/问题{u}/结果/（只准消费这些已验证数字，不得自行重算上游）")
         return "\n".join(片) if 片 else "本问无上游依赖。"
 
+    def 结果模板(编号):
+        """契约/附件给了本问的结果模板文件（2026 A 题起：数据/附件3/resultN.xlsx）则返回镜像里的路径，否则 None。"""
+        try:
+            c = sorted((h.root / "数据").rglob(f"result{编号}.xlsx"))
+            return c[0] if c else None
+        except Exception:
+            return None
+
+    def 结果文件核对(编号):
+        """R58（2026-09-11 A 题问3）：G2 只看解读/红队/门检，不看契约要求交的结果模板文件——问3 建模师给单元格只设了
+        number_format="0.0000"、存的是未舍入浮点，角格也改了名，门照样 PASS。这里在过门后跑只读核对 流水线/验证/核对结果模板.py，
+        **只记日志不判门**（要不要进 G2 判据是用户的决定）；'!!' 前缀让监督正则看见，操盘手在边界派回炉腿。"""
+        模板 = 结果模板(编号)
+        if not 模板:
+            return
+        try:
+            这里 = pathlib.Path(__file__).resolve().parent
+            py = 这里 / "运行时/venv/bin/python3"
+            r = subprocess.run([str(py) if py.exists() else "python3", str(这里 / "验证/核对结果模板.py"), str(h.root), str(模板.parent),
+                                f"--只={模板.name}"], capture_output=True, text=True, timeout=300)
+            坏 = [l.strip() for l in (r.stdout or "").splitlines() if l.strip().startswith("✗")]
+            if r.returncode == 0 and not 坏:
+                log(f"问{编号} 结果文件核对：{模板.name} 全部合格")
+            else:
+                log(f"!! 问{编号} 结果文件核对不合格（R58：不判门，需在边界派建模师回炉）：" + ("；".join(坏)[:400] if 坏 else (r.stderr or "").strip()[-200:]))
+        except Exception as e:
+            log(f"问{编号} 结果文件核对未能执行（不阻塞）：{e}")
+
     def 跑一问(编号, 重算=False):
         """一问的完整子链：建模→执行→解读⟲返工→红队复算→仲裁。返回 (解读结论, 红队结论)。"""
         q = 问表.get(编号, {})
@@ -1072,6 +1142,14 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
                     f"③交接/假设台账_问题{编号}.json（每条：假设号/假设/依据/灵敏度义务/检验结果；**检验结果必须对应求解脚本里真实存在的检验并引用结果键**）"
                     f"④实验记录追加。⑤若求解依赖自生成的合成/仿真输入（含随机种子生成的观测样本），必须把它们冻结导出到 数据/问题{编号}_冻结合成输入/（含 输入清单.json：每个文件的用途、生成方式、参数、SHA256），结果声明的口径指明用了哪份冻结输入——红队只能拿它做同口径复算，导不出就等于头条数字无人能验。"
                     f"脚本运行时间控制在12分钟内。完成写 日志/建模_问题{编号}{标}.done")
+        # P11（R58）：契约列了本问的结果模板文件时，任务文本点名写出纪律——问1/2 建模师自觉 round 了，问3 只设显示格式没舍入存值。
+        # 只追加任务文本，不动角色文件（角色只在续跑同步，且这是任务级要求）。
+        模板 = 结果模板(编号)
+        if 模板:
+            建模任务 += (f"\n⑥结果模板文件纪律：契约要求把完整结果写进 {qdir}/结果/{模板.name}（模板 {模板.relative_to(h.root)}）——文件名、工作表名、"
+                        f"首行距离网格、A 列时间步与模板及契约裁定一致；**所有存入单元格的数值（含时间列与契约要求补的实际结束行）先按契约小数位 round 再写入，"
+                        f"只设 number_format 不算**；角格 A1 沿用模板文字；写完用 openpyxl 读回自检（行列数、步长、末行时刻、每个数值 round(v,位)==v）并写进 "
+                        f"{qdir}/结果/导出核验.json。")
         if 重算:
             建模任务 = f"【级联重算】上游结果已变更，问题{编号}必须按新上游数字重做。" + 建模任务
         wave([("建模师.md", 建模任务, f"建模_问题{编号}{标}")], timeout=1300)
@@ -1168,10 +1246,15 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
             log(f"问题{编号} 红队报告缺失，记为缺失不阻塞")
             return "缺失"
         结论 = str(报告.get("结论", "")).strip()
-        分歧 = [d for d in (报告.get("分歧明细") or [])
-                if isinstance(d, dict) and abs(float(d.get("相对差", 0) or 0)) > 配置["红队容差"]]
+        全部分歧 = [d for d in (报告.get("分歧明细") or []) if isinstance(d, dict)]
+        # R56（2026-09-11 A 题问1 12:55:00）：P1 让红队把独立口径的差异也写进 分歧明细（类型=口径）只作交叉印证，判齐只看按声明口径；
+        # 这里原来不看 类型，一条 4.81% 的口径行（表面半格采样带均值 vs 表面点值）就把结论=对齐 的报告派成了仲裁腿。口径行只记数，不触发仲裁。
+        口径行 = [d for d in 全部分歧 if str(d.get("类型", "")).strip() == "口径"]
+        分歧 = [d for d in 全部分歧
+                if str(d.get("类型", "")).strip() != "口径" and abs(float(d.get("相对差", 0) or 0)) > 配置["红队容差"]]
         if 结论.startswith("对齐") and not 分歧:
-            log(f"问题{编号} 红队结论=对齐" + ("（复核轮）" if 深度 else ""))
+            log(f"问题{编号} 红队结论=对齐" + (f"（口径差异 {len(口径行)} 条只作交叉印证，不计入不齐）" if 口径行 else "")
+                + ("（复核轮）" if 深度 else ""))
             return "对齐"
         log(f"!! 问题{编号} 红队不齐（{len(分歧)} 处超容差）→ 派仲裁腿" + ("（复核轮）" if 深度 else ""))
         # 仲裁台账是有状态的待办表（门检按 消解状态 结账）：复核轮再仲裁会整份重写，先把上一份存档，
@@ -1320,6 +1403,7 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
             放行, 降级 = G2门(bh)
             状态.设问题门(bh, "PASS" if 放行 else ("降级放行" if 降级 else "FAIL"))
             log(f"S2 问{bh} 过门={放行}{'（降级放行）' if 降级 else ''} 解读={结论[:20]} 红队={红结论}")
+            结果文件核对(bh)
             # 每问收口时机械清洗一次实验记录：降级放行的问其 G2 不再检查，含流程词的科学尝试若留着会进 S4 过程感素材（问2 降级时剩 7 条）。
             d = h.exec(f"python3 bin/门检.py 清洗实验记录 {bh}", quiet=True, timeout_s=T_轻)
             log(f"问{bh} 收口清洗：{(d.get('stdout') or '').strip()[:80]}")
@@ -1821,6 +1905,10 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
                f"如图如表句式占比降到40%以下、摘要压到恰好1页、正文≤20页；表达判据（角色文件「表达四律」）：密度超线的章把数字退回图表与答案框、"
                f"保留话每问只留结论句后一处、长句拆短；段首数字段主语前置；超预算段多余数字进表；自造缩写展开成中文；图题去保留话；"
                f"问题重述补「给定/要求」与思路图。\n"
+               # P12（2026-09-11 A 题 G4 连败两次）：返工腿两次都只改摘要，对 2.2 的对冲密度超线写了一篇「审计器有误」的意见就不改稿——
+               # 门判据是用户定的，腿的义务是让稿子过线，异议另走登记，不能替操盘手裁决。
+               f"门判据不由你裁决：表达密度/禁用词/缩写等每一条超线，无论命中在正文还是标题、无论你是否认同该词属置信声明，都必须改写措辞把该章压到线下"
+               f"（不改事实、不删内容、不改数字）；你认为审计器判错的，另写 审稿/审计异议.md（文件、行、理由）交操盘手登记病根，但不得以此为由不改稿。\n"
                f"封死的做法（做了会被驱动整份回退并记越权）：不许删除或缩短附录里的源码清单（lstlisting）——附录必须含全部关键可运行源代码，"
                f"代码里的字面量不算禁用词、代码里的浮点常量不算过精；不许合并/清空/删除任何章文件，不许改 论文/论文.tex 的 \\input 清单；"
                f"不许改 geometry/行距/字号来压页数（版式归 S5 美化）；正文超 20 页只能把细节退到附录或表格。完成写 日志/G4返工.done", "G4返工")], timeout=1800)
@@ -2100,15 +2188,15 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
             快照 = 镜像快照(章路径们)
             基线页 = P
             台账文本 = ("\n【上一轮台账】\n" + 台.渲染给评审腿(裁定文件="审稿/裁定_{名}.json")) if 美轮 > 1 and 台.条目 else ""
-            名们 = []
+            规格 = []
             for bi in range(0, len(页们), 8):
                 批 = 页们[bi:bi + 8]
                 名 = f"美{美轮}_{bi//8+1}"
-                名们.append(图片腿(名, "美化师.md",
-                                  f"审附图各页（对应 {批[0]} 起连续{len(批)}页），输出写 审稿/{名}.json（按角色规范，每条页问题带 严重度 1-3 与可执行的 tex 级指令）。"
-                                  f"{台账文本.replace('{名}', 名)}\n完成写 日志/{名}.done",
-                                  批, timeout=800, reasoning=False))
-            等腿(名们, timeout=1000)
+                规格.append((名, "美化师.md",
+                             f"审附图各页（对应 {批[0]} 起连续{len(批)}页），输出写 审稿/{名}.json（按角色规范，每条页问题带 严重度 1-3 与可执行的 tex 级指令）。"
+                             f"{台账文本.replace('{名}', 名)}\n完成写 日志/{名}.done",
+                             批, False))
+            名们 = 图片腿群(规格, 单腿超时=800, 等待=1000)        # R65：按并发上限分块起腿，不再整份同时起
             if 美轮 > 1 and 台.条目:
                 收裁定(台, 名们)
             页问题集, 分数们 = [], []
@@ -2303,13 +2391,13 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
         页们 = _渲染页()
         log(f"S6 终审：E={E} 页数={P} 渲染{len(页们)}页")
         if 页们 and budget_ok():
-            名们 = []
+            规格 = []
             for bi in range(0, len(页们), 8):
                 批 = 页们[bi:bi + 8]
-                名们.append(图片腿(f"终审_{bi//8+1}", "美化师.md",
-                                  f"【逐页终审·压轴】审附图各页（{批[0]} 起连续{len(批)}页）。这是交付前最后一道视觉关，只报**必须改**的问题。"
-                                  f"输出写 审稿/终审_{bi//8+1}.json（同角色规范 schema）。完成写 日志/终审_{bi//8+1}.done", 批, timeout=800, reasoning=False))
-            等腿(名们, timeout=1000)
+                规格.append((f"终审_{bi//8+1}", "美化师.md",
+                             f"【逐页终审·压轴】审附图各页（{批[0]} 起连续{len(批)}页）。这是交付前最后一道视觉关，只报**必须改**的问题。"
+                             f"输出写 审稿/终审_{bi//8+1}.json（同角色规范 schema）。完成写 日志/终审_{bi//8+1}.done", 批, False))
+            名们 = 图片腿群(规格, 单腿超时=800, 等待=1000)        # R65：按并发上限分块
             必改 = []
             for 名 in 名们:
                 v = get_json(f"审稿/{名}.json", 名) or {}
@@ -2331,7 +2419,7 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
             h.exec(f"python3 bin/门检.py {门名} > /dev/null 2>&1; echo ok", quiet=True, timeout_s=200)
         终 = ["论文/论文.pdf", "审稿/审计报告.json", "交接/实验记录.json", "交接/求解计划.md"]
         d = h.exec("ls 论文/*.tex 论文/页/*.png 审稿/*.json 交接/*.json 交接/*.md 2>/dev/null; "
-                   "find 求解 -name '*.py' -o -name '*.json' -o -name '*.png' -o -name '*.sh' 2>/dev/null", quiet=True)
+                   "find 求解 -name '*.py' -o -name '*.json' -o -name '*.png' -o -name '*.sh' -o -name '*.xlsx' 2>/dev/null", quiet=True)   # R66：结果模板交付物 result*.xlsx 也要收割
         for l in (d.get("stdout") or "").split():
             if l and not l.endswith(":"):
                 终.append(l.replace("/tmp/蜂巢/", ""))

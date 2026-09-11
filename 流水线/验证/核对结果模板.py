@@ -1,5 +1,5 @@
 """核对结果模板交付物（2026 国赛 A 题起）：题目要求把完整结果按 附件3 的模板写进 result1.xlsx–result4.xlsx。
-用法：python3 流水线/验证/核对结果模板.py <成品或镜像目录> <模板目录(含 result*.xlsx)>
+用法：python3 流水线/验证/核对结果模板.py <成品或镜像目录> <模板目录(含 result*.xlsx)> [--只=resultN.xlsx]
 逐个模板：在目录树里找同名文件（排除 数据/ 与 模板目录本身）；核对工作表名、A 列首格、首行距离网格（0…2，步长 0.1 → 21 列，
 result4 末列为「药材表面」）、A 列时间步（result1/2 每 1 s，result3/4 每 60 s）、数值非空且为数、四位小数。退出码 1 = 有不合格。"""
 import pathlib
@@ -12,6 +12,7 @@ except ImportError:
 
 根 = pathlib.Path(sys.argv[1]).resolve()
 模板目录 = pathlib.Path(sys.argv[2]).resolve()
+只 = {a.split("=", 1)[1] for a in sys.argv[3:] if a.startswith("--只=")}      # 可选：只核对指定模板（驱动逐问核对用）
 坏 = 0
 
 
@@ -34,6 +35,8 @@ def 网格(ws):
 
 for 模板 in sorted(模板目录.glob("result*.xlsx")):
     名 = 模板.name
+    if 只 and 名 not in 只:
+        continue
     f = 找(名)
     if not f:
         报(False, 名, "未找到交付文件（应在 求解/ 或 交接/ 下，与模板同名）"); continue
@@ -63,7 +66,34 @@ for 模板 in sorted(模板目录.glob("result*.xlsx")):
         四位 = all((isinstance(v, int) or round(v, 4) == v) for v in 值 if isinstance(v, (int, float)))
         报(网格对 and 表面对, f"{名}[{ws.title}]", f"首行距离网格 0…2/0.1（21 列）{'对' if 网格对 else '不对'}；{'药材表面列 ' + ('有' if 表面对 else '无') if 名 == 'result4.xlsx' else ''}")
         报(时间对, f"{名}[{ws.title}]", f"A 列时间 {len(时间)} 行，步长应为 {步} s：{'对' if 时间对 else '不对'}（首格 {首[0]!r}）")
-        报(非空 == len(值) and len(值) > 0, f"{名}[{ws.title}]", f"数值 {非空}/{len(值)} 非空")
+        if 名 == "result4.xlsx":
+            # 2026 A 题契约裁定（歧义「收缩后固定距离与表面列以及越界格的处理」）：半径收缩后，超出当时半径的固定距离格
+            # 不属于药材，留空而不填 0；「药材表面」列每行必填。故 result4 的非空判据 = 表面列全非空 + 每行的空格只许是尾部连续越界段
+            # （中心侧一旦有值、外侧再出现值后又出现空格即为漏填）。其余三个文件仍要求全部非空。
+            坏行 = 0
+            表面空 = 0
+            for r in 行:
+                if not r or r[0] is None:
+                    continue
+                内 = list(r[1:len(距离)])          # 0…2 的 21 个固定距离格
+                表 = r[len(距离)] if len(r) > len(距离) else None
+                if not isinstance(表, (int, float)):
+                    表面空 += 1
+                有值 = [isinstance(v, (int, float)) for v in 内]
+                if not 有值 or not 有值[0]:
+                    坏行 += 1
+                    continue
+                首空 = 有值.index(False) if False in 有值 else len(有值)
+                if any(有值[首空:]):                # 空格之后又出现数值 → 不是尾部越界段
+                    坏行 += 1
+            报(坏行 == 0 and 表面空 == 0 and 非空 > 0, f"{名}[{ws.title}]",
+              f"数值 {非空}/{len(值)} 非空；表面列空格 {表面空} 行；空格非尾部越界段的行 {坏行}（契约裁定：越界格留空、表面列必填）")
+        else:
+            报(非空 == len(值) and len(值) > 0, f"{名}[{ws.title}]", f"数值 {非空}/{len(值)} 非空")
         报(四位, f"{名}[{ws.title}]", "四位小数" if 四位 else "存在超过四位小数的值")
+        # 角格（A1）只作提示不计不合格：契约只规定 A 列时间/首行距离/工作表名，模板角格「时间\\到药材中心的距离」是否沿用属呈现细节。
+        模板首 = 网格(wt[ws.title]) if ws.title in wt.sheetnames else None
+        if 模板首 and 模板首[0] is not None and str(首[0]).strip() != str(模板首[0]).strip():
+            print(f"  △ {名}[{ws.title}]：角格 A1={首[0]!r} 与模板 {模板首[0]!r} 不同（提示，不计不合格）")
 print("结果模板核对：", "全部合格" if 坏 == 0 else f"{坏} 项不合格")
 sys.exit(1 if 坏 else 0)

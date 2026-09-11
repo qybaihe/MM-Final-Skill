@@ -33,10 +33,22 @@ with_timeout() {
     die "fork failed: $!\n" unless defined $pid;
     if ($pid == 0) { setsid(); exec @ARGV; print STDERR "exec failed: $!\n"; exit 127; }
     my $why = 0;
+    # R63：codex 在沙箱里起的工具子进程会另开进程组（setpgid），只杀 -$pid 组它们会逃成孤儿继续跑
+    # （2026-09-11 A 题试验：LEG_TIMEOUT=60 的腿 rc=142 后 shell 工具 sleep 400 存活）。
+    # 杀之前先按 ppid 树收齐 $pid 的全部后代（父死后孩子会被过继给 1，事后再找就找不到了），组和后代一起 TERM→KILL。
+    my $desc = sub {
+      my %kids; open(my $ps, "-|", "ps", "-eo", "pid=,ppid=") or return ();
+      while (<$ps>) { my ($p, $pp) = split; push @{$kids{$pp}}, $p if defined $pp; }
+      close $ps;
+      my @q = ($pid); my @all;
+      while (@q) { my $x = shift @q; for my $k (@{$kids{$x} || []}) { push @all, $k; push @q, $k; } }
+      return @all;
+    };
     my $reap = sub {
-      kill "TERM", -$pid;
-      for (1..10) { last unless kill(0, -$pid); select(undef, undef, undef, 1); }
-      kill "KILL", -$pid;
+      my @d = $desc->();
+      kill "TERM", -$pid; kill "TERM", @d if @d;
+      for (1..10) { last unless kill(0, -$pid) || grep { kill(0, $_) } @d; select(undef, undef, undef, 1); }
+      kill "KILL", -$pid; kill "KILL", @d if @d;
     };
     $SIG{ALRM} = sub { $why ||= 142; $reap->(); };
     $SIG{TERM} = $SIG{INT} = $SIG{HUP} = sub { $why ||= 143; $reap->(); };

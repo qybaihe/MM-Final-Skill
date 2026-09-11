@@ -560,18 +560,32 @@ report["实验记录分流"] = 记录报告
 
 # 16) 问题重述与总体分析（C5）：1.1 必含"给定/要求"两要素；1.2 总体分析须有思路图。反句式不反内容。
 重述 = {"有章": False, "含给定": False, "含要求": False, "有总体分析": False, "有思路图": False, "文件": ""}
+# R59（2026-09-11 A 题 G4 连败两次）：规划师把第 1 章拆成 1.问题重述与总体分析 / 1.1.问题重述 / 1.2.总体分析 三个文件，
+# 思路图与 \subsection{总体分析} 在 1.2；旧逻辑只看第一个文件名含「问题重述」的文件就 break，两条「缺要素」永远消不掉，
+# 返工腿复现后拒绝为此改稿。现在把第 1 章组（文件名或标题含 问题重述/总体分析/分析思路/总体思路 的章文件）合并后判定：
+# 给定/要求 看问题重述小节的段落，总体分析 看组内 \subsection 标题或文件名，思路图 看组内任一 \includegraphics。判据本身不变。
+_组 = []
 for p_, t in texs.items():
     净 = 画.去注释(t)
-    if "问题重述" in os.path.basename(p_) or re.search(r"\\section\*?\{[^}]*问题重述", 净):
-        重述["有章"] = True
-        重述["文件"] = p_
-        m = re.search(r"\\subsection\*?\{[^}]*问题重述[^}]*\}(.*?)(?=\\subsection|\Z)", 净, re.S)
-        段 = m.group(1) if m else 净
-        重述["含给定"] = bool(re.search(r"给定|已知|提供了|附件", 段))
-        重述["含要求"] = bool(re.search(r"要求|需要|需求|求解|回答", 段))
-        重述["有总体分析"] = bool(re.search(r"\\subsection\*?\{[^}]*(总体分析|分析思路|总体思路)", 净))
-        重述["有思路图"] = bool(re.search(r"\\includegraphics", 净))
-        break
+    名 = os.path.basename(p_)
+    if any(k in 名 for k in ("问题重述", "总体分析", "分析思路", "总体思路")) or \
+            re.search(r"\\(?:sub)?section\*?\{[^}]*(问题重述|总体分析|分析思路|总体思路)", 净):
+        _组.append((p_, 净))
+if _组:
+    _组.sort(key=lambda x: x[0])
+    合 = "\n".join(净 for _, 净 in _组)
+    重述["有章"] = True
+    重述["文件"] = ";".join(p for p, _ in _组)
+    段 = ""
+    for p_, 净 in _组:      # 所有含「问题重述」的 \section/\subsection 标题后的段落都算（父章标题后常是空段，子节才有正文）
+        for m in re.finditer(r"\\(?:sub)?section\*?\{[^}]*问题重述[^}]*\}(.*?)(?=\\(?:sub)?section|\Z)", 净, re.S):
+            段 += m.group(1)
+    段 = 段.strip() or 合
+    重述["含给定"] = bool(re.search(r"给定|已知|提供了|附件", 段))
+    重述["含要求"] = bool(re.search(r"要求|需要|需求|求解|回答", 段))
+    重述["有总体分析"] = bool(re.search(r"\\subsection\*?\{[^}]*(总体分析|分析思路|总体思路)", 合)) or \
+        any(k in os.path.basename(p) for p, _ in _组 for k in ("总体分析", "分析思路", "总体思路"))
+    重述["有思路图"] = bool(re.search(r"\\includegraphics", 合))
 report["问题重述"] = 重述
 
 os.makedirs("审稿", exist_ok=True)

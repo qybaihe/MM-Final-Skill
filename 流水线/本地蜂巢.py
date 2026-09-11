@@ -58,6 +58,14 @@ class LocalHive:
         路径们 = [str(VENV_BIN), str(TEXLIVE_BIN), str(FNM_ALIAS_BIN)]
         路径们 = [p for p in 路径们 if pathlib.Path(p).is_dir()]
         env["PATH"] = ":".join(路径们 + [env.get("PATH", "/usr/bin:/bin")])
+        # R55（2026-09-11 A 题）：codex 腿在 seatbelt 里用 `/bin/bash -lc` 跑命令，macOS 登录 shell 的 path_helper 会把
+        # /etc/paths 的 /opt/homebrew/bin 排到 venv 之前，腿里 `python3` 落到 homebrew 的裸 3.14（无 numpy/openpyxl），
+        # 读题官/体检师/规划师三条腿探针全报「不可发现」，规划师据此把全炉锁成纯标准库路线。PATH 顺序在登录 shell 里守不住，
+        # 改用 PYTHONPATH 直指 venv 的 site-packages（venv 的 home 就是同一个 homebrew 3.14，二进制兼容），谁当 python3 都能导入。
+        站点包 = sorted(VENV_BIN.parent.glob("lib/python3.*/site-packages"))
+        if 站点包:
+            旧 = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = ":".join([str(站点包[-1])] + ([旧] if 旧 else []))
         # matplotlib 配置/字体缓存收进工作根：seatbelt（workspace-write）下可写，
         # 也避免不同运行之间缓存串味；无显示环境强制 Agg。
         env.setdefault("MPLCONFIGDIR", str(self.root / ".cache/mpl"))

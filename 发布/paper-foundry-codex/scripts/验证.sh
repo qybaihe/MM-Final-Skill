@@ -13,6 +13,14 @@ if python3 -m py_compile $PY; then echo "  $(echo "$PY" | wc -l | tr -d ' ') 个
 echo "== 单测 =="
 TESTS="回路单测 统稿守卫单测 门检单测 审计单测 契约核对单测"
 bash "$(cd "$(dirname "$0")" && pwd -P)/打包.sh" --核对 || FAIL=1     # 发布版必须与核心一致（改核心后 bash scripts/打包.sh）
+# R57：切换.sh 把自己和依赖脚本复制到临时目录执行，副本目录里缺任何一个被「dirname 同目录路径」引用的脚本，就会在停净之后「验证失败，不续跑」。
+# 这里对着复制清单做静态核对：清单里每个脚本引用的同目录脚本都必须也在清单里。
+SW="$(cd "$(dirname "$0")" && pwd -P)"; COPYLIST=$(grep -oE 'for f in [^;]*; do cp' "$SW/切换.sh" | head -1 | sed -E 's/^for f in //; s/; do cp$//')
+MISSING=""; for f in $COPYLIST; do for ref in $(grep -oE 'dirname "\$0"\)"?( && pwd -P\))?/[^/" ]+\.sh' "$SW/$f" | grep -oE '[^/"]+\.sh$' | sort -u); do
+  case " $COPYLIST " in *" $ref "*) ;; *) MISSING="$MISSING ${f}→${ref}";; esac; done; done
+if [ -z "$COPYLIST" ]; then echo "  ✗ 切换.sh 复制清单没解析出来（R57 核对失效）"; FAIL=1
+elif [ -n "$MISSING" ]; then echo "  ✗ 切换.sh 复制清单漏了被引用的同目录脚本（R57）：$MISSING"; FAIL=1
+else echo "  ✓ 切换.sh 复制清单闭合（$(echo $COPYLIST | wc -w | tr -d ' ') 个脚本，同目录引用全在清单内）"; fi
 bash 流水线/验证/腿引擎分发.sh >/dev/null 2>&1 && echo "  ✓ 腿引擎分发单测（codex/claude 桩）" || { echo "  ✗ 腿引擎分发单测失败：bash 流水线/验证/腿引擎分发.sh"; FAIL=1; }
 [ "$ALLTESTS" = 1 ] && TESTS="$TESTS 答案门单测"   # 答案门单测 现状 0/7：源码级抽取漏了 读词表（已知，见 references/流程与档位.md 整合清单）
 for t in $TESTS; do

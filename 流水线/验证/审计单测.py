@@ -92,6 +92,25 @@ def 期望(名, 条件, 实际=""):
 重 = 报["问题重述"]
 期望("问题重述五要素全 True", all(重[k] for k in ("有章", "含给定", "含要求", "有总体分析", "有思路图")), 重)
 期望("禁用词不被残留旧章污染（=0）", 报["禁用词"]["数量"] == 0, 报["禁用词"])
+
+# R59（2026-09-11 A 题 G4 连败）：计划把第 1 章拆成 1.问题重述与总体分析 / 1.1.问题重述 / 1.2.总体分析 三个文件，
+# 思路图在 1.2；旧审计只看第一个文件名含「问题重述」的文件就 break → 有总体分析/有思路图 永远 False。第二套夹具专测拆分结构。
+def 跑拆分夹具(带图):
+    根2 = pathlib.Path(tempfile.mkdtemp(prefix="审计单测_拆分_"))
+    shutil.copytree(根, 根2, dirs_exist_ok=True)
+    (根2 / "论文/1.问题重述与总体分析.tex").write_text("\\section{问题重述与总体分析}\n本章先重述题目，再给总体分析。\n", encoding="utf-8")
+    (根2 / "论文/1.1.问题重述.tex").write_text("\\subsection{问题重述}\n题目给定了两组反射光谱（附件 1、2）与折射率公式，要求建立厚度模型并回答三问。\n", encoding="utf-8")
+    (根2 / "论文/1.2.总体分析.tex").write_text("\\subsection{总体分析：边界驱动}\n全文思路见图~\\ref{fig:idea}。\n" +
+        ("\\begin{figure}\\centering\\includegraphics[width=0.8\\textwidth]{../求解/公共/图片/思路.png}\\caption{全文求解思路}\\label{fig:idea}\\end{figure}\n" if 带图 else ""), encoding="utf-8")
+    主 = (根2 / "论文/论文.tex").read_text(encoding="utf-8").replace("\\input{1.问题重述与总体分析.tex}",
+        "\\input{1.问题重述与总体分析.tex}\n\\input{1.1.问题重述.tex}\n\\input{1.2.总体分析.tex}")
+    (根2 / "论文/论文.tex").write_text(主, encoding="utf-8")
+    subprocess.run([sys.executable, "bin/审计.py"], cwd=根2, capture_output=True, text=True, timeout=300)
+    return json.loads((根2 / "审稿/审计报告.json").read_text(encoding="utf-8"))["问题重述"]
+重2 = 跑拆分夹具(带图=True)
+期望("R59 拆分三文件：五要素全 True（思路图在 1.2）", all(重2[k] for k in ("有章", "含给定", "含要求", "有总体分析", "有思路图")), 重2)
+重3 = 跑拆分夹具(带图=False)
+期望("R59 拆分三文件无图：有总体分析 True、有思路图 False", 重3["有总体分析"] and not 重3["有思路图"], 重3)
 print(f"\n{'全部通过' if not 失败 else f'失败 {len(失败)} 项：{失败}'}  （夹具目录 {根}）")
 if 失败:
     print("stderr 尾：", r.stderr[-800:])
