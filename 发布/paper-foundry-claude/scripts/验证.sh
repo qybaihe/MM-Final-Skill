@@ -5,7 +5,7 @@
 source "$(dirname "$0")/公共.sh"
 DRY=""; ALLTESTS=0
 for a in "$@"; do case "$a" in --干跑=*) DRY="${a#--干跑=}";; --全单测) ALLTESTS=1;; -h|--help)
-  echo "用法: 验证.sh [--干跑=全链,中断续跑,级联,门升格,韧性,S5续跑,G5图路,G5算条,G5页数,引擎] [--全单测]"; exit 0;; esac; done
+  echo "用法: 验证.sh [--干跑=全链,中断续跑,级联,门升格,韧性,S5续跑,G5图路,G5算条,G5页数,G4返工图,引擎] [--全单测]"; exit 0;; esac; done
 FAIL=0
 echo "== py_compile =="
 PY=$(find 流水线 -name '*.py' -not -path '*/venv/*' -not -path '*/__pycache__/*')

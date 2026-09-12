@@ -73,6 +73,13 @@ class LocalHive:
         env["CODEX_BIN"] = 找codex()
         env["CLAUDE_BIN"] = 找claude()
         env["LEG_ENGINE"] = self.engine
+        # R69（2026-09-12 A 题）：listings 的 breaklines=true 给每个字符挂一个带 \llap 盒子的 \discretionary（≈100 字/字符，
+        # 是不断行的 8 倍），附录 ≈270 页源码让 xelatex 一页就吃到 3.6M 字、整篇峰值 4,996,734/5,000,000；aux 稍长（引用多几十条）
+        # 就在 shipout 时 "TeX capacity exceeded [main memory size=5000000]"，成品能编过纯属运气（补图后正文页变动即触发）。
+        # web2c 允许运行时用 extra_mem_bot/extra_mem_top 追加内存（texmf.cnf 对 context 就默认 +4M/+2M），只进本进程环境、
+        # 不改系统 texmf.cnf；驱动的 compile_paper/应急编译 与各腿自己跑的 xelatex 都从这个 env 继承。
+        env.setdefault("extra_mem_bot", "5000000")   # 低端：盒子/胶/断点（listings 的 discretionary 全在这一端）
+        env.setdefault("extra_mem_top", "2000000")   # 高端：字符/记号
         self.env = env
 
     # ---------- 路径安全：一切文件操作锁在工作根内 ----------

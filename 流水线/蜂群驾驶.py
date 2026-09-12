@@ -387,10 +387,21 @@ def compile_paper(tag=""):
     d = h.exec(r'''cd 论文 && xelatex -interaction=nonstopmode 论文.tex > /dev/null 2>&1; xelatex -interaction=nonstopmode 论文.tex > /dev/null 2>&1
 E=$(grep -c '^!' 论文.log); O=$(grep -c Overfull 论文.log); P=$(grep -oE '\([0-9]+ pages' 论文.log | grep -oE '[0-9]+' | head -1)
 A=$(grep 'abstract:end' 论文.aux 2>/dev/null | grep -oE '\{[0-9]+\}' | head -1 | tr -d '{}')
-echo "E=$E O=$O P=$P 摘要页=$A"
+M=$(grep -oE '[0-9]+ words of memory out of [0-9]+' 论文.log | head -1 | awk '{printf "%d%%(%s/%s)", $1*100/$7, $1, $7}')
+echo "E=$E O=$O P=$P 摘要页=$A 内存=$M"
 grep '^!' 论文.log | head -5''', timeout_s=400, quiet=True)
     out = (d.get("stdout") or "").strip()
     log(f"编译{tag}: {out.splitlines()[0] if out else 'FAIL'}")
+    # R69 尺（2026-09-12 A 题）：TeX 主内存占比 ≥85% 预警、"TeX capacity exceeded" 点名病根。附录 ≈270 页 listings 源码 +
+    # breaklines=true 曾把峰值顶到 4,996,734/5,000,000，aux 多几十条引用就在 shipout 崩；内存上限已由 本地蜂巢 env 放宽到 ≈10.9M。
+    try:
+        m = re.search(r"内存=(\d+)%", out)
+        if m and int(m.group(1)) >= 85:
+            log(f"!! 编译{tag}: TeX 主内存占比 {m.group(1)}%（R69 尺 ≥85%）——附录源码体量逼近上限，下一次引用变动可能崩；考虑缩附录源码或 listings breakatwhitespace=true")
+        if "TeX capacity exceeded" in out:
+            log(f"!! 编译{tag}: TeX 主内存耗尽（R69）——本地蜂巢 env 的 extra_mem_bot/extra_mem_top 未生效或附录体量已超放宽后的上限")
+    except Exception as e:
+        log(f"R69 尺解析失败（不阻塞）: {e}")
     try:
         kv = dict(x.split("=") for x in out.splitlines()[0].split())
         return int(kv.get("E", 9)), int(kv.get("O", 0)), int(kv.get("P", 0)), out
@@ -685,11 +696,21 @@ def 变化守卫回退(t, 快照, 相对路径们, 上限, 标签):
     return 回退的
 
 
-def 结构守卫回退(快照, 相对路径们, 上限, 标签):
+def 结构守卫回退(快照, 相对路径们, 上限, 标签, 附录集=()):
     """成稿级返工（G4/G5）的机械边界（病根 R38）：
        ① 论文/论文.tex 的 \\input 集合变了 → 主控回退；② 章被清空（原有正文单位、现在没有）→ 回退；
-       ③ 附录 lstlisting 数量减少 → 回退；④ 其余按 回路.修订守卫（无点名，上限=升格线）。被回退的新稿留底 审稿/回退稿/。"""
+       ③ 附录 lstlisting 数量减少 → 回退；④ 其余按 回路.修订守卫（无点名，上限=升格线）。被回退的新稿留底 审稿/回退稿/。
+       ⑤（R68，2026-09-11 A 题）正文章（不在 附录集 里）的 \\includegraphics 数减少 → 回退，且接收了挪入图的章一起回退：
+         G4 返工腿为压页把 17 张图整体挪进附录 8.7、引用改「附录图」，正文只剩 2 张图；①–④ 全放行（R38 只守了源码清单/空章/\\input）。"""
     回退的 = []
+
+    def 留底(rel, 新文):
+        try:
+            留 = 镜像目录 / "审稿/回退稿" / 标签 / pathlib.Path(rel).name
+            留.parent.mkdir(parents=True, exist_ok=True)
+            留.write_text(新文, encoding="utf-8")
+        except Exception as e:
+            log(f"回退稿留底失败 {rel}: {e}")
     for rel in 相对路径们:
         q = 镜像目录 / rel
         if rel not in 快照:
@@ -709,6 +730,8 @@ def 结构守卫回退(快照, 相对路径们, 上限, 标签):
             旧单, 新单 = 回路.正文单位(旧文), 回路.正文单位(新文)
             if 旧单 and not 新单:
                 理由 = "章被清空"
+            elif rel not in 附录集 and 新文.count("\\includegraphics") < 旧文.count("\\includegraphics"):
+                理由 = f"正文插图减少 {旧文.count(chr(92) + 'includegraphics')}→{新文.count(chr(92) + 'includegraphics')}（R68：成稿级返工不许把正文图挪进附录或删图）"
             elif 新文.count("\\begin{lstlisting}") < 旧文.count("\\begin{lstlisting}"):
                 理由 = f"源码清单减少 {旧文.count(chr(92) + 'begin{lstlisting}')}→{新文.count(chr(92) + 'begin{lstlisting}')}"
             else:
@@ -717,12 +740,18 @@ def 结构守卫回退(快照, 相对路径们, 上限, 标签):
                     理由 = f"整份改动 {r:.0%} > {上限:.0%}（未点名句 {明['未点名比']:.0%} 字 {明['字比']:.0%}）"
         if 理由:
             回退的.append((rel, 理由))
-            try:
-                留 = 镜像目录 / "审稿/回退稿" / 标签 / pathlib.Path(rel).name
-                留.parent.mkdir(parents=True, exist_ok=True)
-                留.write_text(新文, encoding="utf-8")
-            except Exception as e:
-                log(f"回退稿留底失败 {rel}: {e}")
+            留底(rel, 新文)
+    if any(理由.startswith("正文插图减少") for _, 理由 in 回退的):
+        # R68：图是「挪」的——接收方（附录章）多出来的同 label 图块也要一起回退，否则 label 重复、同一张图出现两次
+        已 = {rel for rel, _ in 回退的}
+        for rel in 相对路径们:
+            q = 镜像目录 / rel
+            if rel in 快照 and rel not in 已 and q.is_file():
+                旧文 = 快照[rel].decode("utf-8", "replace")
+                新文 = q.read_text(encoding="utf-8", errors="replace")
+                if 新文.count("\\includegraphics") > 旧文.count("\\includegraphics"):
+                    回退的.append((rel, f"接收了挪入的正文图（插图 {旧文.count(chr(92) + 'includegraphics')}→{新文.count(chr(92) + 'includegraphics')}），随源章一起回退（R68）"))
+                    留底(rel, 新文)
     if 回退的:
         回退({rel: 快照[rel] for rel, _ in 回退的}, 标签)
         for rel, 理由 in 回退的:
@@ -1594,6 +1623,8 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
     if not any("附录" in f for f in 章文件):
         章文件.append("99.附录.tex")
         结构.append({"文件名": "99.附录.tex", "章节标题": "附录：核心源代码与产物清单", "内容要点": "国赛要求的可运行核心源代码", "页数配额": "不限"})
+    附录章文件 = {f"论文/{c.get('文件名', '').replace('论文/', '')}" for c in 结构
+               if "附录" in str(c.get("文件名", "")) or c.get("页数归属") == "附录" or str(c.get("页数配额", "")).strip() in ("不限", "不计", "无")}   # R68：8.x 子章（如 8.7.补充验证.tex）名里没有「附录」二字，按 页数归属/配额 认
 
     # ---------- S4 叙事底稿（M5-1 B1，病根 R22）：白话底稿是全部写作腿的第一输入，叙事门机械守住"不懂本题的评委读得懂" ----------
     def _S4叙事底稿():
@@ -1911,8 +1942,10 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
                f"（不改事实、不删内容、不改数字）；你认为审计器判错的，另写 审稿/审计异议.md（文件、行、理由）交操盘手登记病根，但不得以此为由不改稿。\n"
                f"封死的做法（做了会被驱动整份回退并记越权）：不许删除或缩短附录里的源码清单（lstlisting）——附录必须含全部关键可运行源代码，"
                f"代码里的字面量不算禁用词、代码里的浮点常量不算过精；不许合并/清空/删除任何章文件，不许改 论文/论文.tex 的 \\input 清单；"
-               f"不许改 geometry/行距/字号来压页数（版式归 S5 美化）；正文超 20 页只能把细节退到附录或表格。完成写 日志/G4返工.done", "G4返工")], timeout=1800)
-        结构守卫回退(快照, 路径们, 配置["变化守卫_升格"], "G4返工")
+               f"不许改 geometry/行距/字号来压页数（版式归 S5 美化）；正文超 20 页只能把细节（推导过程、误差细表）退到附录或表格——"
+               f"**不许把正文里任何一张图（\\includegraphics）挪进附录或删掉，也不许把图引用改成「附录图」**：图表规划已定每张图的引用章节，结构守卫会整份回退并记越权"
+               f"（P13/R68：2026-09-11 A 题返工腿把 17 张图整体挪进附录 8.7，正文只剩 2 张图，评委看不到任何结果图）。完成写 日志/G4返工.done", "G4返工")], timeout=1800)
+        结构守卫回退(快照, 路径们, 配置["变化守卫_升格"], "G4返工", 附录集=附录章文件)
         checkpoint([f"论文/{f}" for f in 章文件], "G4-返工")
     节点("G4", lambda: 调度器.门("G4", _G4检查, 返工fn=_G4返工, 状态=状态, log=log).执行(), 阶段="G4")
 
@@ -2364,7 +2397,7 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
             wave([("撰稿师.md", 任务, 腿名)], timeout=1300)
             收回执(台, 腿名)
             变化守卫回退(台, 快照, [f"论文/{f}" for f in 章文件], 配置["变化守卫"], 腿名)
-            结构守卫回退(快照, ["论文/论文.tex"] + [f"论文/{f}" for f in 章文件], 配置["变化守卫_升格"], 腿名)
+            结构守卫回退(快照, ["论文/论文.tex"] + [f"论文/{f}" for f in 章文件], 配置["变化守卫_升格"], 腿名, 附录集=附录章文件)
         # R51（20260910 对照跑 16:10）：图路/文路改完不编译就派猎手，猎手按上一次门检的旧 PDF 判——图 13 已重绘成 2.17 μm，
         # 猎手仍按旧 PDF 判「仍标 2.58」→ 硬伤熔断搁置。复核前先编译（顺带量页数给 R52 守卫）。
         _, _, P, _ = _编译修复循环(f"G5返工{n}复核前", 1)
@@ -2423,6 +2456,11 @@ which xelatex gs codex && echo 环境就绪''', timeout_s=120)
         for l in (d.get("stdout") or "").split():
             if l and not l.endswith(":"):
                 终.append(l.replace("/tmp/蜂巢/", ""))
+        # R70（2026-09-12 A 题）：收割只增不删——页数 292→291 后成品 论文/页/ 留着旧 p292.png。页图是纯派生物，收割前清掉再收。
+        try:
+            shutil.rmtree(pathlib.Path(产出目录) / "论文/页", ignore_errors=True)
+        except Exception as e:
+            log(f"清旧页图失败（不阻塞收割）: {e}")
         got = h.harvest(sorted(set(终)), str(产出目录))
         log(f"S6 终稿收割 {len(got)} 文件 → {产出目录}")
         log(f"终态：E={E} Overfull={O} 页数={P} 总腿数={LEG_COUNT} 用时{int((time.time()-T_START)/60)}分钟")

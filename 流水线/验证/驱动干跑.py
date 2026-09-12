@@ -40,6 +40,7 @@ if 引擎场景:
 事件序 = []          # 腿名与脚本名按发生顺序统一登记，用来断言"变体脚本先于裁决""复核先于解读"这类先后关系
 红队读数 = {"n": 0}   # 红队不齐 场景：第一次读 红队_问题1.json 给不齐，之后给对齐
 坏门 = {"G2"} if 模式 == "门升格" else set()
+G4状态 = {"返工过": False}   # G4返工图 场景（R68）：返工腿跑过之前 G4 一直 FAIL，逼出一次成稿级返工
 假根 = {"p": None}      # 假 hive 的工作根：G5图路 场景里 门检_G5 mock 读驱动上传的台账视图，像真门检一样按「收敛」判
 中断于 = {"中断续跑": "建模_问题2", "S5续跑": "审2A"}.get(模式)   # S5续跑：轮1 修订后落盘、轮2 首腿被 kill，验证 R43 轮级断点
 _已中断 = {"flag": False}
@@ -188,6 +189,8 @@ def _mock_json(rel):
     if re.search(r"门检_(G\d)", rel):
         门 = re.search(r"门检_(G[\d:问]+)", rel).group(1)
         坏 = any(门.startswith(b) for b in 坏门)
+        if 模式 == "G4返工图" and 门 == "G4" and not G4状态["返工过"]:
+            return {"通过": False, "明细": ["表达密度超线 1 处（干跑模拟）"]}
         if 模式 in ("G5图路", "G5算条", "G5页数") and 门 == "G5" and 假根["p"]:
             视图p = 假根["p"] / "审稿/审稿台账_视图.json"
             视图 = json.loads(视图p.read_text(encoding="utf-8")) if 视图p.exists() else {}
@@ -345,6 +348,25 @@ class 假Hive:
         效力记录[log_name] = kw.get("effort")
         事件序.append(log_name)
         任务文本[log_name] = task_text
+        if 模式 == "G4返工图" and log_name.startswith("写_"):      # S4 撰稿落地：正文章带一张图（12 句正文，改动比例守卫够不着），附录章带源码清单
+            f = log_name[len("写_"):]
+            p = self.root / "论文" / f
+            p.parent.mkdir(parents=True, exist_ok=True)
+            if not p.exists():
+                if "附录" in f:
+                    p.write_text("\\section{附录}\n\\begin{lstlisting}\nprint(1)\n\\end{lstlisting}\n", encoding="utf-8")
+                else:
+                    正文 = "".join(f"第{i}段说明结果并给出数字{i}.0千克。\n\n" for i in range(1, 13))
+                    p.write_text(f"\\section{{{f}}}\n{正文}图\\ref{{fig:{f}}}显示径向结果。\n\\begin{{figure}}[htbp]\n\\centering\n"
+                                 f"\\includegraphics[width=0.8\\textwidth]{{../求解/问题1/图片/图1_1.png}}\n\\caption{{图题}}\n\\label{{fig:{f}}}\n\\end{{figure}}\n", encoding="utf-8")
+        if 模式 == "G4返工图" and log_name == "G4返工":            # 越权实录（R68，2026-09-11 A 题）：为压页把正文图整块挪进附录、引用改「附录图」
+            正 = self.root / "论文/3.问题1求解.tex"
+            附 = self.root / "论文/99.附录.tex"
+            t = 正.read_text(encoding="utf-8")
+            块 = t[t.index("\\begin{figure}"):t.index("\\end{figure}") + len("\\end{figure}")]
+            正.write_text(t.replace(块, "").replace("图\\ref", "附录图\\ref"), encoding="utf-8")
+            附.write_text(附.read_text(encoding="utf-8") + 块 + "\n", encoding="utf-8")
+            G4状态["返工过"] = True
         if 模式 == "G5页数" and log_name == "G5返工图1":  # S0 会清空工作根，附录源码章在 G5 图路时才播种（快照在其后取）
             附 = self.root / "论文/99.附录.tex"
             附.parent.mkdir(parents=True, exist_ok=True)
@@ -521,6 +543,22 @@ with tempfile.TemporaryDirectory() as td:
         assert any("检查 PASS" in l for l in 门行) and not any(d.get("门") == "G5" for d in st.get("降级放行", [])), "G5 应最终过门且不降级"
         assert st.get("美化后页数") == 19 or (st.get("数据") or {}).get("美化后页数") == 19, f"美化后页数基线应记进状态：{st.get('美化后页数')}"
         print(f"[PASS] R51/R52 G5 页数：复核前编译、40 页 > 19+2 → 回退代码章并留底、回执作废后重派、最终过门；G5 相关腿 {len(序)} 条")
+
+    if 模式 == "G4返工图":
+        门行 = [l.strip() for l in 日志.splitlines() if "门[G4]" in l or "结构守卫[G4返工]" in l or "回退[G4返工]" in l]
+        print("\nG4 事件：")
+        for l in 门行:
+            print("  ", l[:170])
+        正 = (假根["p"] / "论文/3.问题1求解.tex").read_text(encoding="utf-8")
+        附 = (假根["p"] / "论文/99.附录.tex").read_text(encoding="utf-8")
+        留 = 假根["p"] / "审稿/回退稿/G4返工/3.问题1求解.tex"
+        assert "G4返工" in 事件序, f"G4 首检应 FAIL 并派返工腿：{事件序[-8:]}"
+        assert any("结构守卫[G4返工]" in l and "正文插图减少" in l for l in 门行), f"R68：结构守卫应以「正文插图减少」回退正文章：{门行}"
+        assert "\\includegraphics" in 正 and "附录图" not in 正, "正文章应恢复到返工前快照（图回正文、引用不是「附录图」）"
+        assert 附.count("\\includegraphics") == 0, "接收挪入图的附录章应随源章一起回退（否则同 label 出现两次）"
+        assert 留.is_file() and "\\includegraphics" not in 留.read_text(encoding="utf-8"), "越权新稿应留底 审稿/回退稿/G4返工/"
+        assert "G4" in st.get("已完成节点", []), "G4 最终应过门"
+        print(f"[PASS] R68 G4 返工图：返工腿把正文图挪进附录 → 结构守卫回退源章与附录章并留底 → G4 第 2 次过门")
 
     if 模式 == "G5算条":
         序 = [e for e in 事件序 if e.startswith("G5返工") or e.startswith("硬伤G5") or e.startswith("成图回炉G5")]
